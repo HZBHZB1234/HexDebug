@@ -1,8 +1,8 @@
 package gay.`object`.hexdebug.casting.eval
 
-import at.petrak.hexcasting.api.casting.ParticleSpray
-import at.petrak.hexcasting.api.casting.eval.CastingEnvironment
-import at.petrak.hexcasting.api.casting.eval.MishapEnvironment
+import at.petrak.hexcasting.api.spell.ParticleSpray
+import at.petrak.hexcasting.api.spell.casting.CastingEnvironment
+import at.petrak.hexcasting.api.spell.casting.MishapEnvironment
 import at.petrak.hexcasting.api.pigment.FrozenPigment
 import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.Component

@@ -1,6 +1,6 @@
 package gay.`object`.hexdebug.networking.msg
 
-import at.petrak.hexcasting.api.casting.math.HexPattern
+import at.petrak.hexcasting.api.spell.math.HexPattern
 import net.minecraft.network.FriendlyByteBuf
 
 /** Requests the server to run a splicing table action. */

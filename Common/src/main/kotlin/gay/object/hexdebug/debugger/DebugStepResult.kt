@@ -1,6 +1,6 @@
 package gay.`object`.hexdebug.debugger
 
-import at.petrak.hexcasting.api.casting.eval.ExecutionClientView
+import at.petrak.hexcasting.api.spell.casting.ExecutionClientView
 import gay.`object`.hexdebug.core.api.debugging.DebugStepType
 import gay.`object`.hexdebug.core.api.debugging.StopReason
 import org.eclipse.lsp4j.debug.Source

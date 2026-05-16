@@ -1,11 +1,11 @@
 package gay.`object`.hexdebug.debugger.circles
 
-import at.petrak.hexcasting.api.casting.circles.BlockEntityAbstractImpetus
-import at.petrak.hexcasting.api.casting.circles.CircleExecutionState
-import at.petrak.hexcasting.api.casting.eval.CastingEnvironment
-import at.petrak.hexcasting.api.casting.eval.ResolvedPatternType
-import at.petrak.hexcasting.api.casting.eval.env.PlayerBasedCastEnv.AMBIT_RADIUS
-import at.petrak.hexcasting.api.casting.eval.vm.CastingImage
+import at.petrak.hexcasting.api.spell.circles.BlockEntityAbstractImpetus
+import at.petrak.hexcasting.api.spell.circles.CircleExecutionState
+import at.petrak.hexcasting.api.spell.casting.CastingEnvironment
+import at.petrak.hexcasting.api.spell.casting.ResolvedPatternType
+import at.petrak.hexcasting.api.spell.casting.env.PlayerBasedCastEnv.AMBIT_RADIUS
+import at.petrak.hexcasting.api.spell.casting.CastingImage
 import gay.`object`.hexdebug.core.api.debugging.env.BaseCircleDebugEnv
 import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.Component

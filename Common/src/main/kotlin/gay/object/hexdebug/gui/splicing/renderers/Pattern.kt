@@ -1,8 +1,8 @@
 package gay.`object`.hexdebug.gui.splicing.renderers
 
-import at.petrak.hexcasting.api.casting.eval.SpecialPatterns
-import at.petrak.hexcasting.api.casting.iota.IotaType
-import at.petrak.hexcasting.api.casting.iota.PatternIota
+import at.petrak.hexcasting.api.spell.casting.SpecialPatterns
+import at.petrak.hexcasting.api.spell.iota.IotaType
+import at.petrak.hexcasting.api.spell.iota.PatternIota
 import at.petrak.hexcasting.client.render.drawLineSeq
 import at.petrak.hexcasting.client.render.findDupIndices
 import at.petrak.hexcasting.client.render.getCenteredPattern

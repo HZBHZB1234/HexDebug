@@ -1,16 +1,16 @@
 package gay.`object`.hexdebug.debugger
 
 import at.petrak.hexcasting.api.HexAPI
-import at.petrak.hexcasting.api.casting.SpellList
-import at.petrak.hexcasting.api.casting.eval.*
-import at.petrak.hexcasting.api.casting.eval.sideeffects.OperatorSideEffect
-import at.petrak.hexcasting.api.casting.eval.vm.*
-import at.petrak.hexcasting.api.casting.eval.vm.SpellContinuation.Done
-import at.petrak.hexcasting.api.casting.eval.vm.SpellContinuation.NotDone
-import at.petrak.hexcasting.api.casting.iota.*
-import at.petrak.hexcasting.api.casting.mishaps.Mishap
-import at.petrak.hexcasting.api.casting.mishaps.MishapInternalException
-import at.petrak.hexcasting.api.casting.mishaps.MishapStackSize
+import at.petrak.hexcasting.api.spell.SpellList
+import at.petrak.hexcasting.api.spell.casting.*
+import at.petrak.hexcasting.api.spell.casting.OperatorSideEffect
+import at.petrak.hexcasting.api.spell.casting.vm.*
+import at.petrak.hexcasting.api.spell.casting.vm.SpellContinuation.Done
+import at.petrak.hexcasting.api.spell.casting.vm.SpellContinuation.NotDone
+import at.petrak.hexcasting.api.spell.iota.*
+import at.petrak.hexcasting.api.spell.mishaps.Mishap
+import at.petrak.hexcasting.api.spell.mishaps.MishapInternalException
+import at.petrak.hexcasting.api.spell.mishaps.MishapStackSize
 import at.petrak.hexcasting.common.casting.actions.eval.OpEval
 import at.petrak.hexcasting.common.lib.hex.HexEvalSounds
 import gay.`object`.hexdebug.casting.eval.FrameBreakpoint

@@ -1,6 +1,6 @@
 package gay.object.hexdebug.api.client.splicing;
 
-import at.petrak.hexcasting.api.casting.iota.IotaType;
+import at.petrak.hexcasting.api.spell.iota.IotaType;
 import at.petrak.hexcasting.common.lib.hex.HexIotaTypes;
 import gay.object.hexdebug.api.splicing.SplicingTableIotaClientView;
 import gay.object.hexdebug.config.HexDebugClientConfig;

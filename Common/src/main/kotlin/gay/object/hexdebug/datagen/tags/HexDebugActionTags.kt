@@ -1,6 +1,6 @@
 package gay.`object`.hexdebug.datagen.tags
 
-import at.petrak.hexcasting.api.casting.ActionRegistryEntry
+import at.petrak.hexcasting.api.spell.ActionRegistryEntry
 import at.petrak.hexcasting.api.mod.HexTags
 import at.petrak.hexcasting.common.lib.HexRegistries
 import gay.`object`.hexdebug.registry.HexDebugActions

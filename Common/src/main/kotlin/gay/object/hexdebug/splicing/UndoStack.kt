@@ -1,6 +1,6 @@
 package gay.`object`.hexdebug.splicing
 
-import at.petrak.hexcasting.api.casting.iota.Iota
+import at.petrak.hexcasting.api.spell.iota.Iota
 import gay.`object`.hexdebug.config.HexDebugServerConfig
 import gay.`object`.hexdebug.utils.Option
 import gay.`object`.hexdebug.utils.Option.Some

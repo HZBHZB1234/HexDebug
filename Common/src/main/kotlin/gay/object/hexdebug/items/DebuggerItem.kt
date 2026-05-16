@@ -1,6 +1,6 @@
 package gay.`object`.hexdebug.items
 
-import at.petrak.hexcasting.api.casting.iota.ListIota
+import at.petrak.hexcasting.api.spell.iota.ListIota
 import at.petrak.hexcasting.api.mod.HexConfig
 import at.petrak.hexcasting.api.utils.*
 import at.petrak.hexcasting.common.items.magic.ItemPackagedHex

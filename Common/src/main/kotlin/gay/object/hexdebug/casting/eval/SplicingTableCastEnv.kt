@@ -1,9 +1,9 @@
 package gay.`object`.hexdebug.casting.eval
 
 import at.petrak.hexcasting.api.HexAPI
-import at.petrak.hexcasting.api.casting.eval.CastResult
-import at.petrak.hexcasting.api.casting.eval.env.PlayerBasedCastEnv
-import at.petrak.hexcasting.api.casting.eval.vm.CastingImage
+import at.petrak.hexcasting.api.spell.casting.CastResult
+import at.petrak.hexcasting.api.spell.casting.env.PlayerBasedCastEnv
+import at.petrak.hexcasting.api.spell.casting.CastingImage
 import at.petrak.hexcasting.api.pigment.FrozenPigment
 import at.petrak.hexcasting.api.utils.extractMedia
 import at.petrak.hexcasting.common.lib.hex.HexEvalSounds

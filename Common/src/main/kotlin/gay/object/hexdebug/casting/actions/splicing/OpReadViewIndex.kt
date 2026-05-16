@@ -1,11 +1,11 @@
 package gay.`object`.hexdebug.casting.actions.splicing
 
-import at.petrak.hexcasting.api.casting.asActionResult
-import at.petrak.hexcasting.api.casting.castables.ConstMediaAction
-import at.petrak.hexcasting.api.casting.eval.CastingEnvironment
-import at.petrak.hexcasting.api.casting.getBlockPos
-import at.petrak.hexcasting.api.casting.iota.Iota
-import at.petrak.hexcasting.api.casting.mishaps.MishapBadBlock
+import at.petrak.hexcasting.api.spell.asActionResult
+import at.petrak.hexcasting.api.spell.casting.ConstMediaAction
+import at.petrak.hexcasting.api.spell.casting.CastingEnvironment
+import at.petrak.hexcasting.api.spell.getBlockPos
+import at.petrak.hexcasting.api.spell.iota.Iota
+import at.petrak.hexcasting.api.spell.mishaps.MishapBadBlock
 import gay.`object`.hexdebug.blocks.splicing.SplicingTableBlockEntity
 
 object OpReadViewIndex : ConstMediaAction {

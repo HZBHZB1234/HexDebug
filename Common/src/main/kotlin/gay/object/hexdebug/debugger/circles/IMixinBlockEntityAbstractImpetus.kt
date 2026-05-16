@@ -1,6 +1,6 @@
 package gay.`object`.hexdebug.debugger.circles
 
-import at.petrak.hexcasting.api.casting.circles.BlockEntityAbstractImpetus
+import at.petrak.hexcasting.api.spell.circles.BlockEntityAbstractImpetus
 import gay.`object`.hexdebug.core.api.debugging.DebuggableBlock
 
 @Suppress("FunctionName")

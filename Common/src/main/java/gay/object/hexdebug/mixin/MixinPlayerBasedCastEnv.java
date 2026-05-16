@@ -1,8 +1,8 @@
 package gay.object.hexdebug.mixin;
 
-import at.petrak.hexcasting.api.casting.eval.CastingEnvironment;
-import at.petrak.hexcasting.api.casting.eval.env.PlayerBasedCastEnv;
-import at.petrak.hexcasting.api.casting.eval.sideeffects.OperatorSideEffect;
+import at.petrak.hexcasting.api.spell.casting.CastingEnvironment;
+import at.petrak.hexcasting.api.spell.casting.env.PlayerBasedCastEnv;
+import at.petrak.hexcasting.api.spell.casting.OperatorSideEffect;
 import gay.object.hexdebug.core.api.HexDebugCoreAPI;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;

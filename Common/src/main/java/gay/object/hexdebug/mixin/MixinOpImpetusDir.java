@@ -1,9 +1,9 @@
 package gay.object.hexdebug.mixin;
 
-import at.petrak.hexcasting.api.casting.OperatorUtils;
-import at.petrak.hexcasting.api.casting.castables.ConstMediaAction;
-import at.petrak.hexcasting.api.casting.eval.CastingEnvironment;
-import at.petrak.hexcasting.api.casting.iota.Iota;
+import at.petrak.hexcasting.api.spell.OperatorUtils;
+import at.petrak.hexcasting.api.spell.casting.ConstMediaAction;
+import at.petrak.hexcasting.api.spell.casting.CastingEnvironment;
+import at.petrak.hexcasting.api.spell.iota.Iota;
 import at.petrak.hexcasting.common.casting.actions.circles.OpImpetusDir;
 import gay.object.hexdebug.casting.eval.SplicingTableCastEnv;
 import org.spongepowered.asm.mixin.Mixin;

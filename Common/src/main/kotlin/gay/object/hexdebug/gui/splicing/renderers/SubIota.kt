@@ -1,5 +1,5 @@
 package gay.`object`.hexdebug.gui.splicing.renderers
-import at.petrak.hexcasting.api.casting.iota.IotaType
+import at.petrak.hexcasting.api.spell.iota.IotaType
 import gay.`object`.hexdebug.api.client.splicing.SplicingTableIotaRenderer
 import gay.`object`.hexdebug.api.client.splicing.SplicingTableIotaRendererParser
 import gay.`object`.hexdebug.api.client.splicing.SplicingTableIotaRendererProvider

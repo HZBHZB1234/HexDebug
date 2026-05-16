@@ -1,7 +1,7 @@
 package gay.object.hexdebug.mixin;
 
-import at.petrak.hexcasting.api.casting.RenderedSpell;
-import at.petrak.hexcasting.api.casting.eval.CastingEnvironment;
+import at.petrak.hexcasting.api.spell.RenderedSpell;
+import at.petrak.hexcasting.api.spell.casting.CastingEnvironment;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import gay.object.hexdebug.blocks.splicing.SplicingTableBlockEntity;

@@ -1,11 +1,11 @@
 package gay.object.hexdebug.mixin;
 
-import at.petrak.hexcasting.api.casting.castables.Action;
-import at.petrak.hexcasting.api.casting.eval.CastingEnvironment;
-import at.petrak.hexcasting.api.casting.eval.OperationResult;
-import at.petrak.hexcasting.api.casting.eval.vm.CastingImage;
-import at.petrak.hexcasting.api.casting.eval.vm.SpellContinuation;
-import at.petrak.hexcasting.api.casting.iota.Iota;
+import at.petrak.hexcasting.api.spell.casting.Action;
+import at.petrak.hexcasting.api.spell.casting.CastingEnvironment;
+import at.petrak.hexcasting.api.spell.casting.OperationResult;
+import at.petrak.hexcasting.api.spell.casting.CastingImage;
+import at.petrak.hexcasting.api.spell.casting.vm.SpellContinuation;
+import at.petrak.hexcasting.api.spell.iota.Iota;
 import at.petrak.hexcasting.common.casting.actions.eval.OpEval;
 import gay.object.hexdebug.core.api.HexDebugCoreAPI;
 import gay.object.hexdebug.core.api.debugging.DebugStepType;

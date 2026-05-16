@@ -1,6 +1,6 @@
 package gay.`object`.hexdebug.resources.splicing
 
-import at.petrak.hexcasting.api.casting.iota.IotaType
+import at.petrak.hexcasting.api.spell.iota.IotaType
 import at.petrak.hexcasting.common.lib.hex.HexIotaTypes
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonElement

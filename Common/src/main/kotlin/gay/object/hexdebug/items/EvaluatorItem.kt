@@ -1,6 +1,6 @@
 package gay.`object`.hexdebug.items
 
-import at.petrak.hexcasting.api.casting.ParticleSpray
+import at.petrak.hexcasting.api.spell.ParticleSpray
 import at.petrak.hexcasting.api.utils.asTranslatedComponent
 import at.petrak.hexcasting.common.items.ItemStaff
 import at.petrak.hexcasting.common.lib.HexSounds

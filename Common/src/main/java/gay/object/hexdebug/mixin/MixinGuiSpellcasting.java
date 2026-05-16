@@ -1,8 +1,8 @@
 package gay.object.hexdebug.mixin;
 
-import at.petrak.hexcasting.api.casting.eval.ResolvedPattern;
-import at.petrak.hexcasting.api.casting.math.HexCoord;
-import at.petrak.hexcasting.api.casting.math.HexPattern;
+import at.petrak.hexcasting.api.spell.casting.ResolvedPattern;
+import at.petrak.hexcasting.api.spell.math.HexCoord;
+import at.petrak.hexcasting.api.spell.math.HexPattern;
 import at.petrak.hexcasting.client.gui.GuiSpellcasting;
 import at.petrak.hexcasting.common.msgs.IMessage;
 import at.petrak.hexcasting.common.msgs.MsgNewSpellPatternC2S;

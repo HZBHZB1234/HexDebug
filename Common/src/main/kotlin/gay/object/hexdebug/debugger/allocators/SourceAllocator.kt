@@ -1,6 +1,6 @@
 package gay.`object`.hexdebug.debugger.allocators
 
-import at.petrak.hexcasting.api.casting.iota.Iota
+import at.petrak.hexcasting.api.spell.iota.Iota
 import org.eclipse.lsp4j.debug.Source
 
 class SourceAllocator : Allocator<Pair<Source, List<Iota>>>() {

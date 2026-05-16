@@ -1,6 +1,6 @@
 package gay.`object`.hexdebug.adapter
 
-import at.petrak.hexcasting.api.casting.eval.CastingEnvironment
+import at.petrak.hexcasting.api.spell.casting.CastingEnvironment
 import dev.architectury.event.EventResult
 import dev.architectury.event.events.common.EntityEvent
 import dev.architectury.event.events.common.LifecycleEvent

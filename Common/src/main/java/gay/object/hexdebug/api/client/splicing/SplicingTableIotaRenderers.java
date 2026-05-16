@@ -1,6 +1,6 @@
 package gay.object.hexdebug.api.client.splicing;
 
-import at.petrak.hexcasting.api.casting.iota.IotaType;
+import at.petrak.hexcasting.api.spell.iota.IotaType;
 import com.google.common.collect.Maps;
 import com.google.gson.JsonObject;
 import gay.object.hexdebug.HexDebug;

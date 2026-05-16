@@ -1,10 +1,10 @@
 package gay.object.hexdebug.mixin;
 
-import at.petrak.hexcasting.api.casting.circles.BlockEntityAbstractImpetus;
-import at.petrak.hexcasting.api.casting.circles.CircleExecutionState;
-import at.petrak.hexcasting.api.casting.circles.ICircleComponent;
-import at.petrak.hexcasting.api.casting.eval.env.CircleCastEnv;
-import at.petrak.hexcasting.api.casting.eval.vm.CastingImage;
+import at.petrak.hexcasting.api.spell.circles.BlockEntityAbstractImpetus;
+import at.petrak.hexcasting.api.spell.circles.CircleExecutionState;
+import at.petrak.hexcasting.api.spell.circles.ICircleComponent;
+import at.petrak.hexcasting.api.spell.casting.CircleCastEnv;
+import at.petrak.hexcasting.api.spell.casting.CastingImage;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;

@@ -1,6 +1,6 @@
 package gay.`object`.hexdebug.casting.eval
 
-import at.petrak.hexcasting.api.casting.eval.env.PackagedItemCastEnv
+import at.petrak.hexcasting.api.spell.casting.env.PackagedItemCastEnv
 import gay.`object`.hexdebug.utils.findMediaHolderInHand
 import gay.`object`.hexdebug.utils.otherHand
 import net.minecraft.server.level.ServerPlayer

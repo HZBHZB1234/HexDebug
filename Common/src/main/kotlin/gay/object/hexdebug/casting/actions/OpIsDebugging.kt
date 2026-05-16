@@ -1,9 +1,9 @@
 package gay.`object`.hexdebug.casting.actions
 
-import at.petrak.hexcasting.api.casting.asActionResult
-import at.petrak.hexcasting.api.casting.castables.ConstMediaAction
-import at.petrak.hexcasting.api.casting.eval.CastingEnvironment
-import at.petrak.hexcasting.api.casting.iota.Iota
+import at.petrak.hexcasting.api.spell.asActionResult
+import at.petrak.hexcasting.api.spell.casting.ConstMediaAction
+import at.petrak.hexcasting.api.spell.casting.CastingEnvironment
+import at.petrak.hexcasting.api.spell.iota.Iota
 import gay.`object`.hexdebug.core.api.HexDebugCoreAPI
 
 object OpIsDebugging : ConstMediaAction {

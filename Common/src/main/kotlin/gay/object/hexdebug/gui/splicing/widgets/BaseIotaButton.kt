@@ -1,6 +1,6 @@
 package gay.`object`.hexdebug.gui.splicing.widgets
 
-import at.petrak.hexcasting.api.casting.iota.IotaType
+import at.petrak.hexcasting.api.spell.iota.IotaType
 import at.petrak.hexcasting.common.lib.hex.HexIotaTypes
 import com.google.common.cache.CacheBuilder
 import com.mojang.blaze3d.systems.RenderSystem

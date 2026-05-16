@@ -1,6 +1,6 @@
 package gay.object.hexdebug.api.client.splicing;
 
-import at.petrak.hexcasting.api.casting.iota.IotaType;
+import at.petrak.hexcasting.api.spell.iota.IotaType;
 import gay.object.hexdebug.api.splicing.SplicingTableIotaClientView;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
