@@ -1,14 +1,9 @@
 package gay.`object`.hexdebug.casting.iotas
 
-import at.petrak.hexcasting.api.spell.casting.CastResult
-import at.petrak.hexcasting.api.spell.casting.ResolvedPatternType
-import at.petrak.hexcasting.api.spell.casting.vm.CastingVM
-import at.petrak.hexcasting.api.spell.casting.vm.SpellContinuation
 import at.petrak.hexcasting.api.spell.iota.Iota
 import at.petrak.hexcasting.api.spell.iota.IotaType
 import at.petrak.hexcasting.api.utils.asTranslatedComponent
 import at.petrak.hexcasting.api.utils.black
-import at.petrak.hexcasting.common.lib.hex.HexEvalSounds
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.nbt.Tag
 import net.minecraft.server.level.ServerLevel
@@ -20,20 +15,6 @@ class CognitohazardIota : Iota(TYPE, COGNITOHAZARD_SUBSTITUTE) {
     override fun toleratesOther(that: Iota) = typesMatch(this, that)
 
     override fun serialize() = CompoundTag()
-
-    override fun execute(vm: CastingVM, world: ServerLevel, continuation: SpellContinuation): CastResult {
-        // we shouldn't need any special handling in here, since the cognitohazard should be detected by the debugger before we get to this point
-        return CastResult(
-            this,
-            continuation,
-            null,
-            listOf(),
-            ResolvedPatternType.EVALUATED,
-            HexEvalSounds.NOTHING,
-        )
-    }
-
-    override fun executable() = true
 
     companion object {
         private val COGNITOHAZARD_SUBSTITUTE = Object()

@@ -2,8 +2,8 @@ package gay.`object`.hexdebug.casting.actions.splicing
 
 import at.petrak.hexcasting.api.spell.ParticleSpray
 import at.petrak.hexcasting.api.spell.RenderedSpell
-import at.petrak.hexcasting.api.spell.casting.SpellAction
-import at.petrak.hexcasting.api.spell.casting.CastingEnvironment
+import at.petrak.hexcasting.api.spell.SpellAction
+import at.petrak.hexcasting.api.spell.casting.CastingContext
 import at.petrak.hexcasting.api.spell.getBlockPos
 import at.petrak.hexcasting.api.spell.iota.Iota
 import at.petrak.hexcasting.api.spell.mishaps.MishapBadBlock
@@ -17,12 +17,12 @@ import kotlin.math.min
 object OpWriteSelection : SpellAction {
     override val argc = 3
 
-    override fun execute(args: List<Iota>, env: CastingEnvironment): SpellAction.Result {
+    override fun execute(args: List<Iota>, env: CastingContext): SpellAction.Result {
         val pos = args.getBlockPos(0, argc)
         val from = args.getPositiveIntOrNull(1, argc)
         val to = args.getPositiveIntOrNull(2, argc)
 
-        env.assertPosInRangeForEditing(pos)
+        env.assertVecInRange(pos)
 
         val table = env.world.getBlockEntity(pos) as? SplicingTableBlockEntity
             ?: throw MishapBadBlock.of(pos, "splicing_table")
@@ -44,7 +44,7 @@ object OpWriteSelection : SpellAction {
     }
 
     private data class Spell(val table: SplicingTableBlockEntity, val selection: Selection?) : RenderedSpell {
-        override fun cast(env: CastingEnvironment) {
+        override fun cast(env: CastingContext) {
             table.writeSelection(selection)
             table.sync()
         }

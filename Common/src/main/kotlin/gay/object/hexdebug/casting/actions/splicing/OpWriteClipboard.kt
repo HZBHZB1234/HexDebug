@@ -3,8 +3,8 @@ package gay.`object`.hexdebug.casting.actions.splicing
 import at.petrak.hexcasting.api.addldata.ADIotaHolder
 import at.petrak.hexcasting.api.spell.ParticleSpray
 import at.petrak.hexcasting.api.spell.RenderedSpell
-import at.petrak.hexcasting.api.spell.casting.SpellAction
-import at.petrak.hexcasting.api.spell.casting.CastingEnvironment
+import at.petrak.hexcasting.api.spell.SpellAction
+import at.petrak.hexcasting.api.spell.casting.CastingContext
 import at.petrak.hexcasting.api.spell.getBlockPos
 import at.petrak.hexcasting.api.spell.iota.Iota
 import at.petrak.hexcasting.api.spell.mishaps.MishapBadBlock
@@ -15,11 +15,11 @@ import net.minecraft.world.phys.Vec3
 object OpWriteClipboard : SpellAction {
     override val argc = 2
 
-    override fun execute(args: List<Iota>, env: CastingEnvironment): SpellAction.Result {
+    override fun execute(args: List<Iota>, env: CastingContext): SpellAction.Result {
         val pos = args.getBlockPos(0, argc)
         val datum = args[1]
 
-        env.assertPosInRangeForEditing(pos)
+        env.assertVecInRange(pos)
 
         val table = env.world.getBlockEntity(pos) as? SplicingTableBlockEntity
             ?: throw MishapBadBlock.of(pos, "splicing_table")
@@ -43,7 +43,7 @@ object OpWriteClipboard : SpellAction {
     }
 
     private data class Spell(val table: SplicingTableBlockEntity, val clipboardHolder: ADIotaHolder, val datum: Iota) : RenderedSpell {
-        override fun cast(env: CastingEnvironment) {
+        override fun cast(env: CastingContext) {
             clipboardHolder.writeIota(datum, false)
             table.sync()
         }

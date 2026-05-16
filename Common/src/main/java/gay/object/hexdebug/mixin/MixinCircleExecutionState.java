@@ -1,10 +1,10 @@
 package gay.object.hexdebug.mixin;
 
-import at.petrak.hexcasting.api.spell.circles.BlockEntityAbstractImpetus;
-import at.petrak.hexcasting.api.spell.circles.CircleExecutionState;
-import at.petrak.hexcasting.api.spell.circles.ICircleComponent;
-import at.petrak.hexcasting.api.spell.casting.CircleCastEnv;
-import at.petrak.hexcasting.api.spell.casting.CastingImage;
+import at.petrak.hexcasting.api.block.circle.BlockEntityAbstractImpetus;
+import at.petrak.hexcasting.api.block.circle.CircleExecutionState;
+import at.petrak.hexcasting.api.block.circle.ICircleComponent;
+import at.petrak.hexcasting.api.spell.casting.SpellCircleContext;
+import at.petrak.hexcasting.api.spell.casting.CastingHarness;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
@@ -41,7 +41,7 @@ public abstract class MixinCircleExecutionState implements IMixinCircleExecution
     @Shadow
     public Direction enteredFrom;
     @Shadow(remap = false)
-    public CastingImage currentImage;
+    public CastingHarness currentImage;
 
     @Unique
     @Nullable
@@ -86,7 +86,7 @@ public abstract class MixinCircleExecutionState implements IMixinCircleExecution
 
             debugEnv$hexdebug.setPaused(true);
 
-            var env = new CircleCastEnv(world, (CircleExecutionState) (Object) this);
+            var env = new SpellCircleContext(world, (CircleExecutionState) (Object) this);
             debuggable.acceptDebugControlFlow(caster, debugEnv$hexdebug, currentImage, env, enteredFrom, currentPos, bs);
         }
 
@@ -129,10 +129,10 @@ public abstract class MixinCircleExecutionState implements IMixinCircleExecution
         method = "tick",
         at = @At(
             value = "NEW",
-            target = "(Lnet/minecraft/server/level/ServerLevel;Lat/petrak/hexcasting/api/casting/circles/CircleExecutionState;)Lat/petrak/hexcasting/api/casting/eval/env/CircleCastEnv;"
+            target = "(Lnet/minecraft/server/level/ServerLevel;Lat/petrak/hexcasting/api/casting/circles/CircleExecutionState;)Lat/petrak/hexcasting/api/casting/eval/env/SpellCircleContext;"
         )
     )
-    private CircleCastEnv hexdebug$setDebugEnv(CircleCastEnv env) {
+    private SpellCircleContext hexdebug$setDebugEnv(SpellCircleContext env) {
         ((IDebugEnvAccessor) env).setDebugEnv$hexdebug(debugEnv$hexdebug);
         return env;
     }

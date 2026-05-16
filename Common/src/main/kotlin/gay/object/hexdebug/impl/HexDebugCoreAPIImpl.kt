@@ -1,7 +1,7 @@
 package gay.`object`.hexdebug.impl
 
-import at.petrak.hexcasting.api.spell.casting.CastingEnvironment
-import at.petrak.hexcasting.api.spell.casting.CastingImage
+import at.petrak.hexcasting.api.spell.casting.CastingContext
+import at.petrak.hexcasting.api.spell.casting.CastingHarness
 import at.petrak.hexcasting.api.spell.iota.Iota
 import gay.`object`.hexdebug.adapter.DebugAdapter
 import gay.`object`.hexdebug.adapter.DebugAdapterManager
@@ -15,7 +15,7 @@ import org.eclipse.lsp4j.debug.OutputEventArgumentsCategory
 import java.util.*
 
 class HexDebugCoreAPIImpl : HexDebugCoreAPI {
-    override fun getDebugEnv(env: CastingEnvironment): DebugEnvironment? {
+    override fun getDebugEnv(env: CastingContext): DebugEnvironment? {
         return (env as IDebugEnvAccessor).`debugEnv$hexdebug`
     }
 
@@ -37,9 +37,9 @@ class HexDebugCoreAPIImpl : HexDebugCoreAPI {
 
     override fun startDebuggingIotas(
         debugEnv: DebugEnvironment,
-        env: CastingEnvironment,
+        env: CastingContext,
         iotas: MutableList<Iota>,
-        image: CastingImage?,
+        image: CastingHarness?,
     ) {
         getAdapterOrThrow(debugEnv).startExecuting(debugEnv, env, iotas, image)
     }

@@ -1,8 +1,8 @@
 package gay.`object`.hexdebug.casting.actions.splicing
 
 import at.petrak.hexcasting.api.spell.asActionResult
-import at.petrak.hexcasting.api.spell.casting.ConstMediaAction
-import at.petrak.hexcasting.api.spell.casting.CastingEnvironment
+import at.petrak.hexcasting.api.spell.ConstMediaAction
+import at.petrak.hexcasting.api.spell.casting.CastingContext
 import at.petrak.hexcasting.api.spell.getBlockPos
 import at.petrak.hexcasting.api.spell.iota.Iota
 import gay.`object`.hexdebug.blocks.splicing.SplicingTableBlockEntity
@@ -10,9 +10,9 @@ import gay.`object`.hexdebug.blocks.splicing.SplicingTableBlockEntity
 object OpReadableClipboard : ConstMediaAction {
     override val argc = 1
 
-    override fun execute(args: List<Iota>, env: CastingEnvironment): List<Iota> {
+    override fun execute(args: List<Iota>, env: CastingContext): List<Iota> {
         val pos = args.getBlockPos(0, argc)
-        env.assertPosInRange(pos)
+        env.assertVecInRange(pos)
 
         val table = env.world.getBlockEntity(pos) as? SplicingTableBlockEntity
             ?: return false.asActionResult

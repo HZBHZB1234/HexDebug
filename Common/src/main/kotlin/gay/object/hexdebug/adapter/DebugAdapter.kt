@@ -1,10 +1,10 @@
 package gay.`object`.hexdebug.adapter
 
 import at.petrak.hexcasting.api.spell.SpellList
-import at.petrak.hexcasting.api.spell.casting.CastingEnvironment
+import at.petrak.hexcasting.api.spell.casting.CastingContext
 import at.petrak.hexcasting.api.spell.casting.ExecutionClientView
 import at.petrak.hexcasting.api.spell.casting.ResolvedPatternType
-import at.petrak.hexcasting.api.spell.casting.CastingImage
+import at.petrak.hexcasting.api.spell.casting.CastingHarness
 import at.petrak.hexcasting.api.spell.iota.Iota
 import at.petrak.hexcasting.api.spell.iota.PatternIota
 import at.petrak.hexcasting.api.spell.math.HexPattern
@@ -134,9 +134,9 @@ class DebugAdapter(val player: ServerPlayer) : IDebugProtocolServer {
 
     fun startExecuting(
         debugEnv: DebugEnvironment,
-        env: CastingEnvironment,
+        env: CastingContext,
         iotas: List<Iota>,
-        image: CastingImage?,
+        image: CastingHarness?,
     ) {
         val debugger = debugger(debugEnv.sessionId)
             ?: throw IllegalDebugSessionException("Debug session not found")

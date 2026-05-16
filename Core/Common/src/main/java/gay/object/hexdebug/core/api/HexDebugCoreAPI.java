@@ -1,7 +1,7 @@
 package gay.object.hexdebug.core.api;
 
-import at.petrak.hexcasting.api.spell.casting.CastingEnvironment;
-import at.petrak.hexcasting.api.spell.casting.CastingImage;
+import at.petrak.hexcasting.api.spell.casting.CastingContext;
+import at.petrak.hexcasting.api.spell.casting.CastingHarness;
 import at.petrak.hexcasting.api.spell.iota.Iota;
 import gay.object.hexdebug.core.api.debugging.env.DebugEnvironment;
 import gay.object.hexdebug.core.api.debugging.OutputCategory;
@@ -28,7 +28,7 @@ public interface HexDebugCoreAPI {
 
     @Contract(pure = true)
     @Nullable
-    default DebugEnvironment getDebugEnv(@NotNull CastingEnvironment env) {
+    default DebugEnvironment getDebugEnv(@NotNull CastingContext env) {
         return null;
     }
 
@@ -72,9 +72,9 @@ public interface HexDebugCoreAPI {
      */
     default void startDebuggingIotas(
         @NotNull DebugEnvironment debugEnv,
-        @NotNull CastingEnvironment env,
+        @NotNull CastingContext env,
         @NotNull List<Iota> iotas,
-        @Nullable CastingImage image
+        @Nullable CastingHarness image
     ) throws IllegalDebugSessionException {
         throw new IllegalDebugSessionException();
     }

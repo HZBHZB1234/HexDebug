@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git checkout *)",
+      "Bash(git merge *)",
+      "Bash(git show *)",
+      "Bash(git add *)",
+      "Bash(git rm *)",
+      "Bash(git commit *)",
+      "Bash(./gradlew :Forge:build --no-daemon)",
+      "Read(//c/Users/tester/.gradle/wrapper/dists/**)",
+      "Read(//c/Users/tester/.gradle/wrapper/dists/gradle-8.10-bin/**)",
+      "Bash(java -version)",
+      "Bash(git push *)"
+    ]
+  }
+}

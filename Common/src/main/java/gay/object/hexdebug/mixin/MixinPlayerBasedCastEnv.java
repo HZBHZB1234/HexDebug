@@ -1,8 +1,8 @@
 package gay.object.hexdebug.mixin;
 
-import at.petrak.hexcasting.api.spell.casting.CastingEnvironment;
+import at.petrak.hexcasting.api.spell.casting.CastingContext;
 import at.petrak.hexcasting.api.spell.casting.env.PlayerBasedCastEnv;
-import at.petrak.hexcasting.api.spell.casting.OperatorSideEffect;
+import at.petrak.hexcasting.api.spell.casting.sideeffects.OperatorSideEffect;
 import gay.object.hexdebug.core.api.HexDebugCoreAPI;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(PlayerBasedCastEnv.class)
-public abstract class MixinPlayerBasedCastEnv extends CastingEnvironment {
+public abstract class MixinPlayerBasedCastEnv extends CastingContext {
     protected MixinPlayerBasedCastEnv(ServerLevel world) {
         super(world);
     }

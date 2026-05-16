@@ -22,6 +22,9 @@ venv
 
 .architectury-transformer
 
+# Hex Casting reference source
+HexMod-0.10.3/
+
 # hexdoc
 _site/
 _checkout/

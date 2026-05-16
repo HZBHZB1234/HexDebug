@@ -7,7 +7,7 @@ import at.petrak.hexcasting.api.block.HexBlockEntity
 import at.petrak.hexcasting.api.spell.ParticleSpray
 import at.petrak.hexcasting.api.spell.casting.ResolvedPatternType
 import at.petrak.hexcasting.api.spell.casting.SpecialPatterns
-import at.petrak.hexcasting.api.spell.casting.vm.CastingVM
+import at.petrak.hexcasting.api.spell.casting.eval.CastingVM
 import at.petrak.hexcasting.api.spell.iota.Iota
 import at.petrak.hexcasting.api.spell.iota.IotaType
 import at.petrak.hexcasting.api.spell.iota.ListIota

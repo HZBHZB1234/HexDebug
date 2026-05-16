@@ -2,16 +2,23 @@ package gay.`object`.hexdebug.registry
 
 import at.petrak.hexcasting.api.PatternRegistry
 import at.petrak.hexcasting.api.misc.MediaConstants
-import at.petrak.hexcasting.common.casting.actions.spells.OpMakePackagedSpell
-import at.petrak.hexcasting.common.lib.HexRegistries
-import at.petrak.hexcasting.common.lib.hex.HexActions
+import at.petrak.hexcasting.api.spell.Action
+import at.petrak.hexcasting.api.spell.iota.PatternIota
+import at.petrak.hexcasting.api.spell.math.HexDir
+import at.petrak.hexcasting.api.spell.math.HexPattern
+import at.petrak.hexcasting.common.casting.operators.spells.OpMakePackagedSpell
+import at.petrak.hexcasting.common.items.magic.ItemPackagedHex
+import gay.`object`.hexdebug.HexDebug
 import gay.`object`.hexdebug.casting.actions.OpBreakpoint
 import gay.`object`.hexdebug.casting.actions.OpIsDebugging
 import gay.`object`.hexdebug.casting.actions.splicing.*
 import gay.`object`.hexdebug.casting.iotas.CognitohazardIota
+import net.minecraft.resources.ResourceLocation
 
 @Suppress("unused")
-object HexDebugActions : HexDebugRegistrar<ActionRegistryEntry>(HexRegistries.ACTION, { HexActions.REGISTRY }) {
+object HexDebugActions {
+    private val patterns = mutableMapOf<ResourceLocation, Pair<HexPattern, () -> Action>>()
+
     val COGNITOHAZARD = make("const/cognitohazard", HexDir.NORTH_WEST, "wdeaqqdqeedqadqeedqaeadeaqqeadeaqqdqdeaqqeaeedqaw") {
         Action.makeConstantOp(CognitohazardIota())
     }
@@ -21,10 +28,10 @@ object HexDebugActions : HexDebugRegistrar<ActionRegistryEntry>(HexRegistries.AC
     val BREAKPOINT_AFTER = make("breakpoint/after", HexDir.EAST, "wqqaewd", OpBreakpoint(false))
 
     val CRAFT_DEBUGGER = make("craft/debugger", HexDir.SOUTH_WEST, "aaewwwwwaqwawqwadawqwwwawwwqwwwaw") {
-        OpMakePackagedSpell(HexDebugItems.DEBUGGER.value, 10 * MediaConstants.CRYSTAL_UNIT)
+        OpMakePackagedSpell(HexDebugItems.DEBUGGER.value as ItemPackagedHex, 10 * MediaConstants.CRYSTAL_UNIT)
     }
     val CRAFT_QUENCHED_DEBUGGER = make("craft/quenched_debugger", HexDir.SOUTH_EAST, "ddwwwwwwedwewdweqewdwwwewwwdwwwew") {
-        OpMakePackagedSpell(HexDebugItems.QUENCHED_DEBUGGER.value, 10 * MediaConstants.CRYSTAL_UNIT)
+        OpMakePackagedSpell(HexDebugItems.QUENCHED_DEBUGGER.value as ItemPackagedHex, 10 * MediaConstants.CRYSTAL_UNIT)
     }
 
     // splicing table

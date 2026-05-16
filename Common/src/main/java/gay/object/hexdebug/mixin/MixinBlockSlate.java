@@ -2,9 +2,9 @@ package gay.object.hexdebug.mixin;
 
 import at.petrak.hexcasting.api.block.circle.BlockCircleComponent;
 import at.petrak.hexcasting.api.spell.casting.ExecutionClientView;
-import at.petrak.hexcasting.api.spell.casting.CircleCastEnv;
-import at.petrak.hexcasting.api.spell.casting.CastingImage;
-import at.petrak.hexcasting.api.spell.casting.vm.CastingVM;
+import at.petrak.hexcasting.api.spell.casting.SpellCircleContext;
+import at.petrak.hexcasting.api.spell.casting.CastingHarness;
+import at.petrak.hexcasting.api.spell.casting.eval.CastingVM;
 import at.petrak.hexcasting.api.spell.iota.Iota;
 import at.petrak.hexcasting.api.spell.iota.PatternIota;
 import at.petrak.hexcasting.common.blocks.circles.BlockEntitySlate;
@@ -42,8 +42,8 @@ public abstract class MixinBlockSlate
     public void acceptDebugControlFlow(
         ServerPlayer caster,
         BaseCircleDebugEnv debugEnv,
-        CastingImage imageIn,
-        CircleCastEnv env,
+        CastingHarness imageIn,
+        SpellCircleContext env,
         Direction enterDir,
         BlockPos pos,
         BlockState bs

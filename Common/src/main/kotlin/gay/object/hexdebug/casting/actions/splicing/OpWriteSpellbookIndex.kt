@@ -3,8 +3,8 @@ package gay.`object`.hexdebug.casting.actions.splicing
 import at.petrak.hexcasting.api.block.HexBlockEntity
 import at.petrak.hexcasting.api.spell.ParticleSpray
 import at.petrak.hexcasting.api.spell.RenderedSpell
-import at.petrak.hexcasting.api.spell.casting.SpellAction
-import at.petrak.hexcasting.api.spell.casting.CastingEnvironment
+import at.petrak.hexcasting.api.spell.SpellAction
+import at.petrak.hexcasting.api.spell.casting.CastingContext
 import at.petrak.hexcasting.api.spell.getBlockPos
 import at.petrak.hexcasting.api.spell.getIntBetween
 import at.petrak.hexcasting.api.spell.iota.Iota
@@ -20,11 +20,11 @@ import kotlin.math.max
 class OpWriteSpellbookIndex(private val useListItem: Boolean) : SpellAction {
     override val argc = 2
 
-    override fun execute(args: List<Iota>, env: CastingEnvironment): SpellAction.Result {
+    override fun execute(args: List<Iota>, env: CastingContext): SpellAction.Result {
         val pos = args.getBlockPos(0, argc)
         val index = args.getIntBetween(idx=1, min=1, max=ItemSpellbook.MAX_PAGES, argc=argc)
 
-        env.assertPosInRangeForEditing(pos)
+        env.assertVecInRange(pos)
 
         val (blockEntity, stack) = OpReadSpellbookIndex.getSpellbook(env, pos, useListItem)
 
@@ -36,7 +36,7 @@ class OpWriteSpellbookIndex(private val useListItem: Boolean) : SpellAction {
     }
 
     private data class Spell(val blockEntity: HexBlockEntity, val stack: ItemStack, val index: Int) : RenderedSpell {
-        override fun cast(env: CastingEnvironment) {
+        override fun cast(env: CastingContext) {
             // copied from ItemSpellbook.rotatePageIdx with modifications
             stack.putInt(ItemSpellbook.TAG_SELECTED_PAGE, index)
 

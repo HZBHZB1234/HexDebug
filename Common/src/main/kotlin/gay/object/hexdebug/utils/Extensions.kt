@@ -1,15 +1,17 @@
 package gay.`object`.hexdebug.utils
 
 import at.petrak.hexcasting.api.HexAPI
-import at.petrak.hexcasting.api.spell.PatternShapeMatch
-import at.petrak.hexcasting.api.spell.casting.CastingEnvironment
+import at.petrak.hexcasting.api.PatternRegistry
+import at.petrak.hexcasting.api.spell.casting.CastingContext
 import at.petrak.hexcasting.api.spell.casting.SpecialPatterns
 import at.petrak.hexcasting.api.spell.iota.*
 import at.petrak.hexcasting.api.spell.math.HexPattern
 import at.petrak.hexcasting.api.spell.mishaps.MishapInvalidIota
+import at.petrak.hexcasting.api.spell.mishaps.MishapInvalidPattern
 import at.petrak.hexcasting.api.spell.mishaps.MishapNotEnoughArgs
 import at.petrak.hexcasting.api.utils.*
 import at.petrak.hexcasting.xplat.IXplatAbstractions
+import net.minecraft.server.level.ServerLevel
 import gay.`object`.hexdebug.api.splicing.SplicingTableIotaClientView
 import net.minecraft.commands.arguments.NbtPathArgument.NbtPath
 import net.minecraft.core.Registry
@@ -138,7 +140,7 @@ fun Iota.displayWithPatternName(world: ServerLevel): Component = when (this) {
 }
 
 @JvmOverloads
-fun Iota.toHexpatternSource(env: CastingEnvironment, wrapEmbedded: Boolean = true): String {
+fun Iota.toHexpatternSource(env: CastingContext, wrapEmbedded: Boolean = true): String {
     val iotaText = when (this) {
         is PatternIota -> {
             // don't wrap known patterns in angled brackets
@@ -153,8 +155,8 @@ fun Iota.toHexpatternSource(env: CastingEnvironment, wrapEmbedded: Boolean = tru
         is ListIota -> list.joinToString(separator = ", ", prefix = "[", postfix = "]") {
             when (it) {
                 // don't use { and } for intro/retro in an embedded list
-                is PatternIota -> it.pattern.getI18nOrNull(world)?.string ?: it.pattern.simpleString()
-                else -> it.toHexpatternSource(world, wrapEmbedded = false)
+                is PatternIota -> it.pattern.getI18nOrNull(env)?.string ?: it.pattern.simpleString()
+                else -> it.toHexpatternSource(env, wrapEmbedded = false)
             }
         }
         is GarbageIota -> "Garbage"
@@ -173,25 +175,22 @@ fun List<SplicingTableIotaClientView>.toHexpatternSource(): String {
     }
 }
 
-fun HexPattern.getI18nOrNull(env: CastingEnvironment): Component? {
-    val hexAPI = HexAPI.instance()
-    return when (val lookup = PatternRegistryManifest.matchPattern(this, env, false)) {
-        is PatternShapeMatch.Normal -> hexAPI.getActionI18n(lookup.key, false)
-        is PatternShapeMatch.PerWorld -> hexAPI.getActionI18n(lookup.key, true)
-        is PatternShapeMatch.Special -> lookup.handler.name
-        is PatternShapeMatch.Nothing -> {
-            val path = when (this.angles) {
-                SpecialPatterns.INTROSPECTION.angles -> "open_paren"
-                SpecialPatterns.RETROSPECTION.angles -> "close_paren"
-                SpecialPatterns.CONSIDERATION.angles -> "escape"
-                SpecialPatterns.EVANITION.angles -> "undo"
-                else -> return null
-            }
-            hexAPI.getRawHookI18n(HexAPI.modLoc(path))
+fun HexPattern.getI18nOrNull(world: ServerLevel): Component? {
+    return try {
+        PatternRegistry.matchPattern(this, world).displayName
+    } catch (e: MishapInvalidPattern) {
+        val path = when {
+            angles == SpecialPatterns.INTROSPECTION.angles -> "open_paren"
+            angles == SpecialPatterns.RETROSPECTION.angles -> "close_paren"
+            angles == SpecialPatterns.CONSIDERATION.angles -> "escape"
+            else -> return null
         }
         "hexcasting.spell.hexcasting:$path".asTranslatedComponent.lightPurple
     }
 }
+
+fun HexPattern.getI18nOrNull(env: CastingContext): Component? =
+    getI18nOrNull(env.world)
 
 /** Format: `START_DIR signature` (eg. `EAST`, `NORTH_WEST aqwed`) */
 fun HexPattern.simpleString() = buildString {

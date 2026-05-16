@@ -1,10 +1,10 @@
 package gay.object.hexdebug.mixin;
 
 import at.petrak.hexcasting.api.spell.OperatorUtils;
-import at.petrak.hexcasting.api.spell.casting.ConstMediaAction;
-import at.petrak.hexcasting.api.spell.casting.CastingEnvironment;
+import at.petrak.hexcasting.api.spell.ConstMediaAction;
+import at.petrak.hexcasting.api.spell.casting.CastingContext;
 import at.petrak.hexcasting.api.spell.iota.Iota;
-import at.petrak.hexcasting.common.casting.actions.circles.OpImpetusDir;
+import at.petrak.hexcasting.common.casting.operators.circles.OpImpetusDir;
 import gay.object.hexdebug.casting.eval.SplicingTableCastEnv;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -18,7 +18,7 @@ public abstract class MixinOpImpetusDir implements ConstMediaAction {
     @Inject(method = "execute", at = @At("HEAD"), cancellable = true, remap = false)
     private void hexdebug$handleSplicingTableEnv(
         List<? extends Iota> args,
-        CastingEnvironment ctx,
+        CastingContext ctx,
         CallbackInfoReturnable<List<? extends Iota>> cir
     ) {
         if (ctx instanceof SplicingTableCastEnv env) {

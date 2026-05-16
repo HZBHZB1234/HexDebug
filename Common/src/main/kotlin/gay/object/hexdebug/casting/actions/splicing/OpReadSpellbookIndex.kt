@@ -2,8 +2,8 @@ package gay.`object`.hexdebug.casting.actions.splicing
 
 import at.petrak.hexcasting.api.block.HexBlockEntity
 import at.petrak.hexcasting.api.spell.asActionResult
-import at.petrak.hexcasting.api.spell.casting.ConstMediaAction
-import at.petrak.hexcasting.api.spell.casting.CastingEnvironment
+import at.petrak.hexcasting.api.spell.ConstMediaAction
+import at.petrak.hexcasting.api.spell.casting.CastingContext
 import at.petrak.hexcasting.api.spell.getBlockPos
 import at.petrak.hexcasting.api.spell.iota.Iota
 import at.petrak.hexcasting.api.spell.mishaps.MishapBadBlock
@@ -17,9 +17,9 @@ import net.minecraft.world.item.ItemStack
 class OpReadSpellbookIndex(private val useListItem: Boolean) : ConstMediaAction {
     override val argc = 1
 
-    override fun execute(args: List<Iota>, env: CastingEnvironment): List<Iota> {
+    override fun execute(args: List<Iota>, env: CastingContext): List<Iota> {
         val pos = args.getBlockPos(0, argc)
-        env.assertPosInRange(pos)
+        env.assertVecInRange(pos)
 
         val (_, stack) = getSpellbook(env, pos, useListItem)
 
@@ -28,7 +28,7 @@ class OpReadSpellbookIndex(private val useListItem: Boolean) : ConstMediaAction 
 
     companion object {
         fun getSpellbook(
-            env: CastingEnvironment,
+            env: CastingContext,
             pos: BlockPos,
             useListItem: Boolean,
         ): Pair<HexBlockEntity, ItemStack> {

@@ -3,15 +3,15 @@ package gay.`object`.hexdebug.debugger
 import at.petrak.hexcasting.api.HexAPI
 import at.petrak.hexcasting.api.spell.SpellList
 import at.petrak.hexcasting.api.spell.casting.*
-import at.petrak.hexcasting.api.spell.casting.OperatorSideEffect
-import at.petrak.hexcasting.api.spell.casting.vm.*
-import at.petrak.hexcasting.api.spell.casting.vm.SpellContinuation.Done
-import at.petrak.hexcasting.api.spell.casting.vm.SpellContinuation.NotDone
+import at.petrak.hexcasting.api.spell.casting.sideeffects.OperatorSideEffect
+import at.petrak.hexcasting.api.spell.casting.eval.*
+import at.petrak.hexcasting.api.spell.casting.eval.SpellContinuation.Done
+import at.petrak.hexcasting.api.spell.casting.eval.SpellContinuation.NotDone
 import at.petrak.hexcasting.api.spell.iota.*
 import at.petrak.hexcasting.api.spell.mishaps.Mishap
 import at.petrak.hexcasting.api.spell.mishaps.MishapInternalException
 import at.petrak.hexcasting.api.spell.mishaps.MishapStackSize
-import at.petrak.hexcasting.common.casting.actions.eval.OpEval
+import at.petrak.hexcasting.common.casting.operators.eval.OpEval
 import at.petrak.hexcasting.common.lib.hex.HexEvalSounds
 import gay.`object`.hexdebug.casting.eval.FrameBreakpoint
 import gay.`object`.hexdebug.casting.iotas.CognitohazardIota
@@ -36,7 +36,7 @@ class HexDebugger(
     var state = DebuggerState.RUNNING
         private set
 
-    private var env: CastingEnvironment? = null
+    private var env: CastingContext? = null
         set(value) {
             field = value
             (value as? IDebugEnvAccessor)?.`debugEnv$hexdebug` = debugEnv
@@ -72,7 +72,7 @@ class HexDebugger(
 
     private var lastResolutionType = ResolvedPatternType.UNRESOLVED
 
-    private var image = CastingImage()
+    private var image = CastingHarness()
 
     // Initialize the continuation stack to a single top-level eval for all iotas.
     private var nextContinuation: SpellContinuation = Done
@@ -349,7 +349,7 @@ class HexDebugger(
         postStep(DebugStepResult(StopReason.STEP))
     }
 
-    fun startExecuting(env: CastingEnvironment, iotas: List<Iota>, image: CastingImage?): DebugStepResult? {
+    fun startExecuting(env: CastingContext, iotas: List<Iota>, image: CastingHarness?): DebugStepResult? {
         if (!state.canPause) {
             return null
         }

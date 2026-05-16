@@ -1,6 +1,6 @@
 package gay.`object`.hexdebug.debugger.circles
 
-import at.petrak.hexcasting.api.spell.circles.CircleExecutionState
+import at.petrak.hexcasting.api.block.circle.CircleExecutionState
 
 @Suppress("PropertyName")
 interface IMixinCircleExecutionState {

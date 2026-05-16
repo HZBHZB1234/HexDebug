@@ -1,8 +1,8 @@
 package gay.object.hexdebug.mixin;
 
 import at.petrak.hexcasting.api.block.HexBlockEntity;
-import at.petrak.hexcasting.api.spell.circles.BlockEntityAbstractImpetus;
-import at.petrak.hexcasting.api.spell.circles.CircleExecutionState;
+import at.petrak.hexcasting.api.block.circle.BlockEntityAbstractImpetus;
+import at.petrak.hexcasting.api.block.circle.CircleExecutionState;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import gay.object.hexdebug.core.api.HexDebugCoreAPI;

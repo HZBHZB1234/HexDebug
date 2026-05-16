@@ -1,7 +1,7 @@
 package gay.object.hexdebug.core.api.debugging;
 
-import at.petrak.hexcasting.api.spell.casting.CircleCastEnv;
-import at.petrak.hexcasting.api.spell.casting.CastingImage;
+import at.petrak.hexcasting.api.spell.casting.SpellCircleContext;
+import at.petrak.hexcasting.api.spell.casting.CastingHarness;
 import gay.object.hexdebug.core.api.debugging.env.BaseCircleDebugEnv;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -12,8 +12,8 @@ public interface DebuggableCircleComponent {
     void acceptDebugControlFlow(
         ServerPlayer caster,
         BaseCircleDebugEnv debugEnv,
-        CastingImage imageIn,
-        CircleCastEnv env,
+        CastingHarness imageIn,
+        SpellCircleContext env,
         Direction enterDir,
         BlockPos pos,
         BlockState bs

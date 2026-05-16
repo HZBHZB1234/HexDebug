@@ -1,7 +1,7 @@
 package gay.`object`.hexdebug.casting.eval
 
 import at.petrak.hexcasting.api.spell.ParticleSpray
-import at.petrak.hexcasting.api.spell.casting.CastingEnvironment
+import at.petrak.hexcasting.api.spell.casting.CastingContext
 import at.petrak.hexcasting.api.spell.casting.MishapEnvironment
 import at.petrak.hexcasting.api.pigment.FrozenPigment
 import net.minecraft.core.BlockPos
@@ -14,11 +14,11 @@ import net.minecraft.world.phys.Vec3
 import java.util.function.Predicate
 
 /**
- * A concrete subclass of CastingEnvironment with stubs for all methods.
+ * A concrete subclass of CastingContext with stubs for all methods.
  *
  * This is only used for looking up and localizing patterns.
  */
-class FakeCastEnv(level: ServerLevel) : CastingEnvironment(level) {
+class FakeCastEnv(level: ServerLevel) : CastingContext(level) {
     override fun getCastingEntity(): LivingEntity? = null
 
     override fun getMishapEnvironment(): MishapEnvironment = TODO()

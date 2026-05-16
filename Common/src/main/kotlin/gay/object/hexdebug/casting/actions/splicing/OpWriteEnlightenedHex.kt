@@ -2,8 +2,8 @@ package gay.`object`.hexdebug.casting.actions.splicing
 
 import at.petrak.hexcasting.api.spell.ParticleSpray
 import at.petrak.hexcasting.api.spell.RenderedSpell
-import at.petrak.hexcasting.api.spell.casting.SpellAction
-import at.petrak.hexcasting.api.spell.casting.CastingEnvironment
+import at.petrak.hexcasting.api.spell.SpellAction
+import at.petrak.hexcasting.api.spell.casting.CastingContext
 import at.petrak.hexcasting.api.spell.getBlockPos
 import at.petrak.hexcasting.api.spell.getList
 import at.petrak.hexcasting.api.spell.iota.Iota
@@ -16,11 +16,11 @@ import net.minecraft.world.phys.Vec3
 object OpWriteEnlightenedHex : SpellAction {
     override val argc = 2
 
-    override fun execute(args: List<Iota>, env: CastingEnvironment): SpellAction.Result {
+    override fun execute(args: List<Iota>, env: CastingContext): SpellAction.Result {
         val pos = args.getBlockPos(0, argc)
         val hex = args.getList(1, argc).toList()
 
-        env.assertPosInRangeForEditing(pos)
+        env.assertVecInRange(pos)
 
         val table = env.world.getBlockEntity(pos) as? SplicingTableBlockEntity
             ?: throw MishapBadBlock.of(pos, "splicing_table")
@@ -41,7 +41,7 @@ object OpWriteEnlightenedHex : SpellAction {
     }
 
     private data class Spell(val table: SplicingTableBlockEntity, val hex: List<Iota>) : RenderedSpell {
-        override fun cast(env: CastingEnvironment) {
+        override fun cast(env: CastingContext) {
             table.setHex(hex)
             table.sync()
         }

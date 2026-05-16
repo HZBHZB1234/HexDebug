@@ -1,10 +1,10 @@
 package gay.object.hexdebug.core.api.debugging.env;
 
-import at.petrak.hexcasting.api.spell.casting.Action;
-import at.petrak.hexcasting.api.spell.casting.CastingEnvironment;
+import at.petrak.hexcasting.api.spell.Action;
+import at.petrak.hexcasting.api.spell.casting.CastingContext;
 import at.petrak.hexcasting.api.spell.casting.ResolvedPatternType;
-import at.petrak.hexcasting.api.spell.casting.OperatorSideEffect;
-import at.petrak.hexcasting.api.spell.casting.CastingImage;
+import at.petrak.hexcasting.api.spell.casting.sideeffects.OperatorSideEffect;
+import at.petrak.hexcasting.api.spell.casting.CastingHarness;
 import gay.object.hexdebug.core.api.HexDebugCoreAPI;
 import gay.object.hexdebug.core.api.debugging.DebugStepType;
 import gay.object.hexdebug.core.api.debugging.OutputCategory;
@@ -19,7 +19,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.UUID;
 
 /**
- * Like {@link CastingEnvironment}, but for debugging.
+ * Like {@link CastingContext}, but for debugging.
  */
 public abstract class DebugEnvironment {
     @NotNull
@@ -41,8 +41,8 @@ public abstract class DebugEnvironment {
      * @return true if the debug session can continue, or false if the debuggee should be terminated
      */
     public abstract boolean resume(
-        @NotNull CastingEnvironment env,
-        @NotNull CastingImage image,
+        @NotNull CastingContext env,
+        @NotNull CastingHarness image,
         @NotNull ResolvedPatternType resolutionType
     );
 
@@ -89,8 +89,8 @@ public abstract class DebugEnvironment {
      * ran out of iotas to execute and {@link DebugEnvironment#resume} returned {@code true}.
      */
     public void postStep(
-        @NotNull CastingEnvironment env,
-        @NotNull CastingImage image,
+        @NotNull CastingContext env,
+        @NotNull CastingHarness image,
         @Nullable StopReason reason
     ) {}
 
@@ -114,7 +114,7 @@ public abstract class DebugEnvironment {
     }
 
     public void printDebugMishap(
-        @NotNull CastingEnvironment env,
+        @NotNull CastingContext env,
         @NotNull OperatorSideEffect.DoMishap sideEffect
     ) {
         var message = sideEffect.getMishap().errorMessageWithName(env, sideEffect.getErrorCtx());

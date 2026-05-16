@@ -1,9 +1,9 @@
 package gay.`object`.hexdebug.casting.eval
 
 import at.petrak.hexcasting.api.HexAPI
-import at.petrak.hexcasting.api.spell.casting.CastResult
+import at.petrak.hexcasting.api.spell.casting.CastingHarness.CastResult
 import at.petrak.hexcasting.api.spell.casting.env.PlayerBasedCastEnv
-import at.petrak.hexcasting.api.spell.casting.CastingImage
+import at.petrak.hexcasting.api.spell.casting.CastingHarness
 import at.petrak.hexcasting.api.pigment.FrozenPigment
 import at.petrak.hexcasting.api.utils.extractMedia
 import at.petrak.hexcasting.common.lib.hex.HexEvalSounds
@@ -33,7 +33,7 @@ class SplicingTableCastEnv(
         sound = sound.greaterOf(result.sound)
     }
 
-    override fun postCast(image: CastingImage) {
+    override fun postCast(image: CastingHarness) {
         super.postCast(image)
         sound.sound?.let {
             world.playSound(null, blockPos, it, SoundSource.PLAYERS, 1f, 1f)

@@ -1,8 +1,8 @@
 package gay.object.hexdebug.core.api.debugging.env;
 
-import at.petrak.hexcasting.api.spell.casting.CastingEnvironment;
+import at.petrak.hexcasting.api.spell.casting.CastingContext;
 import at.petrak.hexcasting.api.spell.casting.ResolvedPatternType;
-import at.petrak.hexcasting.api.spell.casting.CastingImage;
+import at.petrak.hexcasting.api.spell.casting.CastingHarness;
 import at.petrak.hexcasting.api.spell.iota.Iota;
 import gay.object.hexdebug.core.api.HexDebugCoreAPI;
 import gay.object.hexdebug.core.api.exceptions.DebugException;
@@ -17,7 +17,7 @@ import java.util.List;
 
 public class SimplePlayerBasedDebugEnv extends DebugEnvironment {
     @NotNull
-    private final CastingEnvironment env;
+    private final CastingContext env;
     @NotNull
     private final List<Iota> iotas;
     @NotNull
@@ -25,7 +25,7 @@ public class SimplePlayerBasedDebugEnv extends DebugEnvironment {
 
     public SimplePlayerBasedDebugEnv(
         @NotNull ServerPlayer caster,
-        @NotNull CastingEnvironment env,
+        @NotNull CastingContext env,
         @NotNull List<Iota> iotas,
         @NotNull Component name
         ) {
@@ -37,8 +37,8 @@ public class SimplePlayerBasedDebugEnv extends DebugEnvironment {
 
     @Override
     public boolean resume(
-        @NotNull CastingEnvironment env,
-        @NotNull CastingImage image,
+        @NotNull CastingContext env,
+        @NotNull CastingHarness image,
         @NotNull ResolvedPatternType resolutionType
     ) {
         return false;

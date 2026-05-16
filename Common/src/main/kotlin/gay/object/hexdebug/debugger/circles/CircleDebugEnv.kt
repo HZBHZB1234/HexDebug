@@ -1,11 +1,11 @@
 package gay.`object`.hexdebug.debugger.circles
 
-import at.petrak.hexcasting.api.spell.circles.BlockEntityAbstractImpetus
-import at.petrak.hexcasting.api.spell.circles.CircleExecutionState
-import at.petrak.hexcasting.api.spell.casting.CastingEnvironment
+import at.petrak.hexcasting.api.block.circle.BlockEntityAbstractImpetus
+import at.petrak.hexcasting.api.block.circle.CircleExecutionState
+import at.petrak.hexcasting.api.spell.casting.CastingContext
 import at.petrak.hexcasting.api.spell.casting.ResolvedPatternType
 import at.petrak.hexcasting.api.spell.casting.env.PlayerBasedCastEnv.AMBIT_RADIUS
-import at.petrak.hexcasting.api.spell.casting.CastingImage
+import at.petrak.hexcasting.api.spell.casting.CastingHarness
 import gay.`object`.hexdebug.core.api.debugging.env.BaseCircleDebugEnv
 import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.Component
@@ -23,8 +23,8 @@ class CircleDebugEnv(caster: ServerPlayer, val pos: BlockPos) : BaseCircleDebugE
     }
 
     override fun resume(
-        env: CastingEnvironment,
-        image: CastingImage,
+        env: CastingContext,
+        image: CastingHarness,
         resolutionType: ResolvedPatternType,
     ): Boolean {
         if (!resolutionType.success) return false

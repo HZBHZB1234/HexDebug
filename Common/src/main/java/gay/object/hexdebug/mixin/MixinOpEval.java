@@ -1,12 +1,12 @@
 package gay.object.hexdebug.mixin;
 
-import at.petrak.hexcasting.api.spell.casting.Action;
-import at.petrak.hexcasting.api.spell.casting.CastingEnvironment;
+import at.petrak.hexcasting.api.spell.Action;
+import at.petrak.hexcasting.api.spell.casting.CastingContext;
 import at.petrak.hexcasting.api.spell.casting.OperationResult;
-import at.petrak.hexcasting.api.spell.casting.CastingImage;
-import at.petrak.hexcasting.api.spell.casting.vm.SpellContinuation;
+import at.petrak.hexcasting.api.spell.casting.CastingHarness;
+import at.petrak.hexcasting.api.spell.casting.eval.SpellContinuation;
 import at.petrak.hexcasting.api.spell.iota.Iota;
-import at.petrak.hexcasting.common.casting.actions.eval.OpEval;
+import at.petrak.hexcasting.common.casting.operators.eval.OpEval;
 import gay.object.hexdebug.core.api.HexDebugCoreAPI;
 import gay.object.hexdebug.core.api.debugging.DebugStepType;
 import org.spongepowered.asm.mixin.Mixin;

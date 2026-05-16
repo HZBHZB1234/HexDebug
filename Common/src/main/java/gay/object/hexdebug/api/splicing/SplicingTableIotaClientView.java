@@ -1,6 +1,6 @@
 package gay.object.hexdebug.api.splicing;
 
-import at.petrak.hexcasting.api.spell.casting.CastingEnvironment;
+import at.petrak.hexcasting.api.spell.casting.CastingContext;
 import at.petrak.hexcasting.api.spell.iota.Iota;
 import at.petrak.hexcasting.api.spell.iota.IotaType;
 import at.petrak.hexcasting.common.lib.hex.HexIotaTypes;
@@ -51,7 +51,7 @@ public record SplicingTableIotaClientView(
     @ApiStatus.Internal
     public SplicingTableIotaClientView(
         @NotNull Iota iota,
-        @NotNull CastingEnvironment env,
+        @NotNull CastingContext env,
         int index,
         int depth
     ) {
