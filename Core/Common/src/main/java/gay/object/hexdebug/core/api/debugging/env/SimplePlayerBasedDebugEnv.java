@@ -1,9 +1,9 @@
 package gay.object.hexdebug.core.api.debugging.env;
 
-import at.petrak.hexcasting.api.casting.eval.CastingEnvironment;
-import at.petrak.hexcasting.api.casting.eval.ResolvedPatternType;
-import at.petrak.hexcasting.api.casting.eval.vm.CastingImage;
-import at.petrak.hexcasting.api.casting.iota.Iota;
+import at.petrak.hexcasting.api.spell.casting.CastingEnvironment;
+import at.petrak.hexcasting.api.spell.casting.ResolvedPatternType;
+import at.petrak.hexcasting.api.spell.casting.CastingImage;
+import at.petrak.hexcasting.api.spell.iota.Iota;
 import gay.object.hexdebug.core.api.HexDebugCoreAPI;
 import gay.object.hexdebug.core.api.exceptions.DebugException;
 import gay.object.hexdebug.core.api.exceptions.IllegalDebugSessionException;

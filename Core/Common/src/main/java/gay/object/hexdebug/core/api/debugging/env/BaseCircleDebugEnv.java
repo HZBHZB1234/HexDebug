@@ -1,6 +1,6 @@
 package gay.object.hexdebug.core.api.debugging.env;
 
-import at.petrak.hexcasting.api.casting.eval.vm.CastingImage;
+import at.petrak.hexcasting.api.spell.casting.CastingImage;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;

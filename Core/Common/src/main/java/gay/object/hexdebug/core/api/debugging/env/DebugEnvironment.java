@@ -1,10 +1,10 @@
 package gay.object.hexdebug.core.api.debugging.env;
 
-import at.petrak.hexcasting.api.casting.castables.Action;
-import at.petrak.hexcasting.api.casting.eval.CastingEnvironment;
-import at.petrak.hexcasting.api.casting.eval.ResolvedPatternType;
-import at.petrak.hexcasting.api.casting.eval.sideeffects.OperatorSideEffect;
-import at.petrak.hexcasting.api.casting.eval.vm.CastingImage;
+import at.petrak.hexcasting.api.spell.casting.Action;
+import at.petrak.hexcasting.api.spell.casting.CastingEnvironment;
+import at.petrak.hexcasting.api.spell.casting.ResolvedPatternType;
+import at.petrak.hexcasting.api.spell.casting.OperatorSideEffect;
+import at.petrak.hexcasting.api.spell.casting.CastingImage;
 import gay.object.hexdebug.core.api.HexDebugCoreAPI;
 import gay.object.hexdebug.core.api.debugging.DebugStepType;
 import gay.object.hexdebug.core.api.debugging.OutputCategory;
