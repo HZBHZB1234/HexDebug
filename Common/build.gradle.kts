@@ -20,18 +20,11 @@ dependencies {
 
     modApi(libs.clothConfig.common)
 
-    libs.mixinExtras.common.also {
-        implementation(it)
-        annotationProcessor(it)
-    }
+    implementation(libs.mixinExtras)
 
     implementation(libs.bundles.lsp4j)
 
     implementation(libs.bundles.ktor)
-
-    modImplementation(libs.ioticblocks.common)
-
-    modCompileOnly(libs.emi.xplat)
 
     api(project(":hexdebug-core-common", "namedElements"))
 }
