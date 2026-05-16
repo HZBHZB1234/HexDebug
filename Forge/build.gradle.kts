@@ -44,12 +44,6 @@ hexdebugModDependencies {
         replace(Regex("""\](\S+)"""), "($1")
         replace(Regex("""(\S+)\["""), "$1)")
     }
-
-    requires("architectury-api")
-    requires("cloth-config")
-    requires(curseforge = "hexcasting", modrinth = "hex-casting")
-
-    requires("kotlin-for-forge")
 }
 
 dependencies {
