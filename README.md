@@ -4,13 +4,14 @@
 
 [CurseForge](https://curseforge.com/minecraft/mc-mods/hexdebug) | [Modrinth](https://modrinth.com/mod/hexdebug)
 
-A [Hex Casting](https://github.com/FallingColors/HexMod) addon that runs a debug server using the [Debug Adapter Protocol](https://microsoft.github.io/debug-adapter-protocol), allowing you to use real debugging tools like VSCode to find bugs in your hexes.
+A [Hex Casting](https://github.com/FallingColors/HexMod) addon for debugging and editing hexes. The Debugger runs a debug server using the [Debug Adapter Protocol](https://microsoft.github.io/debug-adapter-protocol), allowing you to use real debugging tools like VSCode to find bugs in your hexes; and the Splicing Table provides an easy-to-use GUI for finding and fixing mistakes.
 
 [![YouTube video thumbnail: HexDebug Mod Showcase](http://img.youtube.com/vi/FEsmrYoNV0A/0.jpg)](http://www.youtube.com/watch?v=FEsmrYoNV0A "HexDebug Mod Showcase")
 
 ## Features
 
 - **Debugging**: Step through your hexes pattern-by-pattern with [vscode-hex-casting](https://marketplace.visualstudio.com/items?itemName=object-Object.hex-casting) or [any other DAP-compatible editor](https://microsoft.github.io/debug-adapter-protocol/implementors/tools/)!
+- **Editing**: Use the Splicing Table to edit hexes just like in a text editor, with buttons and keyboard shortcuts to select, move, duplicate, delete, and copy/paste iotas, and even draw patterns in a mini staff grid.
 - **Step Modes**: Use any of the well-known step modes (step in/out/over, continue, restart, stop) with the ingame item and/or through VSCode.
 - **Variables**: See the stack, ravenmind, and even some internal values like the evaluated pattern count.
 - **Call Stack**: Debug complex meta-evaluating hexes with the call stack, generated from the next continuation to be executed. Learn how Hex Casting's internals work!
@@ -40,7 +41,7 @@ repositories {
     maven { url = uri("https://maven.blamejared.com") }
 }
 dependencies {
-    modImplementation("gay.object.hexdebug:hexdebug-$platform:$hexdebugVersion")
+    modImplementation("gay.object.hexdebug:hexdebug-$platform:$hexdebugVersion+$minecraftVersion")
 }
 ```
 
@@ -48,20 +49,49 @@ Full examples:
 
 ```groovy
 // released versions
-modImplementation("gay.object.hexdebug:hexdebug-common:0.2.0+1.19.2")
-modImplementation("gay.object.hexdebug:hexdebug-fabric:0.2.0+1.19.2")
-modImplementation("gay.object.hexdebug:hexdebug-forge:0.2.0+1.19.2")
+modImplementation("gay.object.hexdebug:hexdebug-common:0.7.0+1.20.1")
+modImplementation("gay.object.hexdebug:hexdebug-fabric:0.7.0+1.20.1")
+modImplementation("gay.object.hexdebug:hexdebug-forge:0.7.0+1.20.1")
 
 // bleeding edge builds
-modImplementation("gay.object.hexdebug:hexdebug-common:0.2.0+1.19.2-SNAPSHOT")
-modImplementation("gay.object.hexdebug:hexdebug-fabric:0.2.0+1.19.2-SNAPSHOT")
-modImplementation("gay.object.hexdebug:hexdebug-forge:0.2.0+1.19.2-SNAPSHOT")
+modImplementation("gay.object.hexdebug:hexdebug-common:0.7.0+1.20.1-SNAPSHOT")
+modImplementation("gay.object.hexdebug:hexdebug-fabric:0.7.0+1.20.1-SNAPSHOT")
+modImplementation("gay.object.hexdebug:hexdebug-forge:0.7.0+1.20.1-SNAPSHOT")
 ```
 
-Try to avoid using things outside of the `gay.object.hexdebug.api` package, since they may change at any time.
+HexDebug Core is a minimal, Java-only mod containing only the API classes required to implement debug support. The intention is for HexDebug Core to be included in other addons via Jar-in-Jar, allowing addons to implement optional debugging support in their casting environments (eg. wisps, cassettes) while minimizing the amount of overhead and added complexity from checking whether HexDebug is loaded or not. To include HexDebug Core in your mod via Jar-in-Jar, add the following to your Fabric and Forge subprojects **instead of** the above snippets:
+
+```groovy
+// Fabric
+modImplementation(include("gay.object.hexdebug:hexdebug-core-fabric:$hexdebugVersion+$minecraftVersion"))
+modLocalRuntime("gay.object.hexdebug:hexdebug-fabric:$hexdebugVersion+$minecraftVersion")
+
+// Forge (Architectury)
+modImplementation(include("gay.object.hexdebug:hexdebug-core-forge:$hexdebugVersion+$minecraftVersion"))
+modLocalRuntime("gay.object.hexdebug:hexdebug-forge:$hexdebugVersion+$minecraftVersion")
+
+// Forge (ForgeGradle)
+// see also: https://docs.minecraftforge.net/en/fg-6.x/dependencies/jarinjar/
+implementation(fg.deobf("gay.object.hexdebug:hexdebug-core-forge:$hexdebugVersion+$minecraftVersion"))
+jarJar("gay.object.hexdebug:hexdebug-core-forge:$hexdebugVersion+$minecraftVersion") {
+    transitive = false
+    jarJar.ranged(it, "[$hexdebugVersion,)")
+}
+runtimeOnly(fg.deobf("gay.object.hexdebug:hexdebug-forge:$hexdebugVersion+$minecraftVersion"))
+```
+
+Mojmap jars for `common` are also available, for use in VanillaGradle-based xplat projects:
+
+```groovy
+modImplementation("gay.object.hexdebug:hexdebug-common-mojmap:$hexdebugVersion+$minecraftVersion")
+modImplementation("gay.object.hexdebug:hexdebug-core-common-mojmap:$hexdebugVersion+$minecraftVersion")
+```
+
+Note that anything outside of the `gay.object.hexdebug.api` and `gay.object.hexdebug.core.api` packages may be changed, renamed, or removed at any time without warning. 
 
 ## Attribution
 
 * Textures: SamsTheNerd! ([GitHub](https://github.com/SamsTheNerd), [Modrinth](https://modrinth.com/user/SamsTheNerd))
 * Translations:
+  * `ru_ru`: JustS-js ([GitHub](https://github.com/JustS-js), [Modrinth](https://modrinth.com/user/JustS-js)) 
   * `zh_cn`: ChuijkYahus ([GitHub](https://github.com/ChuijkYahus))

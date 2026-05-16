@@ -1,7 +1,10 @@
 package gay.`object`.hexdebug.gui.splicing.widgets
 
-import com.mojang.blaze3d.vertex.PoseStack
+import gay.`object`.hexdebug.config.HexDebugClientConfig
 import gay.`object`.hexdebug.gui.splicing.SplicingTableScreen
+import net.minecraft.client.InputType
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.components.AbstractButton
 import net.minecraft.client.gui.components.Tooltip
 import net.minecraft.client.gui.narration.NarrationElementOutput
@@ -12,10 +15,12 @@ abstract class SplicingTableButton(
     y: Int,
     width: Int,
     height: Int,
-    message: Component,
-) : AbstractButton(x, y, width, height, message) {
+    message: Component?,
+) : AbstractButton(x, y, width, height, message ?: Component.empty()) {
     init {
-        tooltip = Tooltip.create(message)
+        if (message != null) {
+            tooltip = Tooltip.create(message)
+        }
     }
 
     abstract val uOffset: Int
@@ -58,4 +63,17 @@ abstract class SplicingTableButton(
     override fun updateNarration(output: NarrationElementOutput) = defaultButtonNarrationText(output)
 
     open fun reload() {}
+
+    override fun updateTooltip() {
+        if (HexDebugClientConfig.config.splicingTableKeybinds.let { it.enabled && it.overrideVanillaArrowKeys }) {
+            updateFocus()
+        }
+        super.updateTooltip()
+    }
+
+    open fun updateFocus() {
+        if (Minecraft.getInstance().lastInputType == InputType.KEYBOARD_ARROW) {
+            isFocused = false
+        }
+    }
 }

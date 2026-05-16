@@ -1,9 +1,28 @@
+import hexdebug.hexdebugProperties
+
 plugins {
     id("hexdebug.conventions.platform")
 }
 
 architectury {
     fabric()
+}
+
+fabricApi {
+    configureDataGeneration {
+        outputDirectory = file("src/generated/resources")
+        modId = hexdebugProperties.modId
+        strictValidation = true
+        addToResources = false
+    }
+}
+
+loom {
+    runs {
+        named("datagen") {
+            property("hexdebug.apply-datagen-mixin", "true")
+        }
+    }
 }
 
 hexdebugModDependencies {
@@ -18,14 +37,18 @@ hexdebugModDependencies {
         replace(Regex("""\](\S+)"""), ">$1")
         replace(Regex("""(\S+)\["""), "<$1")
     }
+}
 
+hexdebugPublishDependencies {
     requires("architectury-api")
     requires("cloth-config")
     requires(curseforge = "hexcasting", modrinth = "hex-casting")
+    requires("ioticblocks")
 
     requires("fabric-api")
     requires("fabric-language-kotlin")
 
+    optional("emi")
     optional("modmenu")
 }
 
@@ -46,15 +69,17 @@ dependencies {
         exclude(module = "pehkui")
     }
     modLocalRuntime(libs.paucal.fabric)
-    modLocalRuntime(libs.patchouli.fabric)
+    modImplementation(libs.patchouli.fabric)
     modLocalRuntime(libs.cardinalComponents)
     modLocalRuntime(libs.serializationHooks)
     modLocalRuntime(libs.entityReach)
     modLocalRuntime(libs.trinkets)
+    modLocalRuntime(libs.inline.fabric)
 
-    libs.mixinExtras.also {
-        localRuntime(it)
+    libs.mixinExtras.fabric.also {
+        implementation(it)
         include(it)
+        annotationProcessor(it)
     }
 
     modApi(libs.clothConfig.fabric) {
@@ -73,6 +98,20 @@ dependencies {
     }
 
     modLocalRuntime(libs.devAuth.fabric)
+
+    modImplementation(libs.ioticblocks.fabric)
+
+    libs.emi.fabric.also {
+        modCompileOnly(it)
+        modLocalRuntime(it)
+    }
+
+    libs.hexical.also {
+        modCompileOnly(it)
+        modLocalRuntime(it)
+    }
+    modLocalRuntime(libs.hexpose) { isTransitive = false }
+    modLocalRuntime(libs.playerAnimator.fabric)
 }
 
 publishMods {
@@ -92,6 +131,10 @@ publishMods {
 }
 
 tasks {
+    remapJar {
+        injectAccessWidener.set(true)
+    }
+
     named("publishGithub") {
         dependsOn(
             project(":Common").tasks.remapJar,

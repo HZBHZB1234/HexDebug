@@ -1,33 +1,35 @@
 package gay.`object`.hexdebug.gui.splicing
 
 import at.petrak.hexcasting.api.utils.asTranslatedComponent
+import at.petrak.hexcasting.api.utils.gray
+import at.petrak.hexcasting.api.utils.italic
 import at.petrak.hexcasting.client.gui.GuiSpellcasting
-import at.petrak.hexcasting.common.lib.HexSounds
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.vertex.PoseStack
 import gay.`object`.hexdebug.HexDebug
+import gay.`object`.hexdebug.config.ConfigModifierKey
+import gay.`object`.hexdebug.config.HexDebugClientConfig
+import gay.`object`.hexdebug.config.HexDebugServerConfig
 import gay.`object`.hexdebug.gui.splicing.widgets.*
+import gay.`object`.hexdebug.sendHexicalKeyEvent
+import gay.`object`.hexdebug.splicing.IOTA_BUTTONS
 import gay.`object`.hexdebug.splicing.Selection
 import gay.`object`.hexdebug.splicing.SplicingTableAction
-import gay.`object`.hexdebug.splicing.toHexpatternSource
-import gay.`object`.hexdebug.utils.falpha
-import gay.`object`.hexdebug.utils.fblue
-import gay.`object`.hexdebug.utils.fgreen
-import gay.`object`.hexdebug.utils.fred
-import net.minecraft.ChatFormatting
+import gay.`object`.hexdebug.utils.*
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.components.AbstractButton
-import net.minecraft.client.gui.components.Button
-import net.minecraft.client.gui.components.Tooltip
-import net.minecraft.client.gui.components.Widget
-import net.minecraft.client.gui.screens.Screen
+import net.minecraft.client.gui.components.Renderable
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
+import net.minecraft.client.renderer.RenderType
+import net.minecraft.client.resources.sounds.SimpleSoundInstance
 import net.minecraft.network.chat.Component
+import net.minecraft.sounds.SoundEvents
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.entity.player.Inventory
+import org.lwjgl.glfw.GLFW
 import java.awt.Color
 import java.util.function.BiConsumer
-import kotlin.math.pow
+import kotlin.math.*
 
 @Suppress("SameParameterValue")
 class SplicingTableScreen(
@@ -41,98 +43,96 @@ class SplicingTableScreen(
         imageHeight = 193
     }
 
-    var selection: Selection? = null
-        set(value) {
-            field = value
-            reloadData()
-        }
-
     val data get() = menu.clientView
+    val selection get() = menu.selection
+    val viewStartIndex get() = menu.viewStartIndex
 
     private val hasMediaItem get() = menu.mediaSlot.hasItem()
-    private val hasStaffItem get() = menu.staffSlot.hasItem()
+    val hasStaffItem get() = menu.staffSlot.hasItem()
+
+    private val hasMediaForAction get() = menu.media >= HexDebugServerConfig.config.splicingTableMediaCost
+
+    private var prevSelection: Selection? = selection
+    private var prevViewStartIndex = viewStartIndex
+    private var prevMedia = menu.media
 
     var guiSpellcasting = GuiSpellcasting(
         InteractionHand.MAIN_HAND, mutableListOf(), listOf(), null, 1
     ).apply {
         mixin.`onDrawSplicingTablePattern$hexdebug` = BiConsumer { pattern, index ->
-            menu.table.drawPattern(null, pattern, index, selection)
+            menu.table.drawPattern(null, pattern, index)
         }
     }
 
     // should be multiples of 32, since that's how big the edge parts are
-    private val staffWidth = 32 * 6
-    private val staffHeight = 32 * 6
+    private val staffWidth = 32 * 7
+    private val staffHeight = 32 * 7
 
-    private val staffMinX get() = leftPos - 14 - staffWidth
-    private val staffMaxX get() = leftPos - 14
-    private val staffMinY get() = topPos
-    private val staffMaxY get() = topPos + staffHeight
+    // 32 * 6 is the height that matches the main GUI
+    // so offset up if taller or down if shorter
+    private val staffOffsetY: Int = ((32 * 6) - staffHeight) / 2
 
-    private val iotaButtons = mutableListOf<AbstractButton>()
-    private val edgeButtons = mutableListOf<AbstractButton>()
-    private val viewButtons = mutableListOf<AbstractButton>()
-    private val staffButtons = mutableListOf<AbstractButton>()
+    // relative to top left (for hasClickedOutside)
+    private val staffMaxXOffset = -14
+    private val staffMinXOffset = staffMaxXOffset - staffWidth
+    private val staffMinYOffset = staffOffsetY
+    private val staffMaxYOffset = staffMinYOffset + staffHeight
+
+    private val staffSlotWidth = 23
+    private val staffSlotHeight = 24
+
+    private val staffSlotMinXOffset = -24
+    private val staffSlotMaxXOffset = staffSlotMinXOffset + staffSlotWidth
+    private val staffSlotMinYOffset = 165
+    private val staffSlotMaxYOffset = staffSlotMinYOffset + staffSlotHeight
+
+    private val storageMinXOffset = 192
+    private val storageMaxXOffset = storageMinXOffset + 46
+    private val storageMinYOffset = 103
+    private val storageMaxYOffset = storageMinYOffset + 87
+
+    // absolute
+    val staffMinX get() = leftPos + staffMinXOffset
+    val staffMaxX get() = leftPos + staffMaxXOffset
+    val staffMinY get() = topPos + staffMinYOffset
+    val staffMaxY get() = topPos + staffMaxYOffset
+
+    val staffSlotMinX get() = leftPos + staffSlotMinXOffset
+    val staffSlotMaxX get() = leftPos + staffSlotMaxXOffset
+    val staffSlotMinY get() = topPos + staffSlotMinYOffset
+    val staffSlotMaxY get() = topPos + staffSlotMaxYOffset
+
+    val storageMinX get() = leftPos + storageMinXOffset
+    val storageMaxX get() = leftPos + storageMaxXOffset
+    val storageMinY get() = topPos + storageMinYOffset
+    val storageMaxY get() = topPos + storageMaxYOffset
+
+    val exportButtonX get() = leftPos + 194
+    val exportButtonY get() = topPos + 18
+    val exportButtonWidth = 24
+    val exportButtonHeight = 24
+
+    val castButtonX get() = leftPos + 194
+    val castButtonY get() = topPos + 64
+    val castButtonWidth = 24
+    val castButtonHeight = 24
+
     private val predicateButtons = mutableListOf<Pair<AbstractButton, () -> Boolean>>()
 
-    private val listReadButtons = sequenceOf(
-        iotaButtons,
-        edgeButtons,
-        viewButtons,
-        staffButtons,
-    ).flatten()
-
-    private val allButtons = sequenceOf(
-        listReadButtons,
-        predicateButtons.asSequence().map { it.first },
-    ).flatten()
-
-    private var viewStartIndex = 0
-        set(value) {
-            val clamped = if (data.list?.let { it.size > IOTA_BUTTONS } == true) {
-                value.coerceIn(0..data.lastIndex - IOTA_BUTTONS + 1)
-            } else 0
-            if (field != clamped) {
-                field = clamped
-                reloadData()
-            }
-        }
-
     private var clearGridButton: SpriteButton? = null
+
+    private var castingCooldown = 0
+
+    private val canCastIgnoringCooldown get() = data.isEnlightened && data.hasHex && hasMediaForAction
 
     override fun init() {
         super.init()
 
         guiSpellcasting.init(minecraft!!, width, height)
-        Minecraft.getInstance().soundManager.stop(HexSounds.CASTING_AMBIANCE.location, null)
 
         titleLabelX = (imageWidth - font.width(title)) / 2
 
-        iotaButtons.clear()
-        edgeButtons.clear()
-        viewButtons.clear()
         predicateButtons.clear()
-
-        iotaButtons += (0 until IOTA_BUTTONS).map { offset ->
-            Button.builder(Component.empty()) { onSelectIota(viewStartIndex + offset) }
-                .pos(leftPos + 20 + offset * 26, topPos - 18)
-                .size(22, 16)
-                .build()
-        }
-
-        edgeButtons += (0..IOTA_BUTTONS).map { offset ->
-            Button.builder(Component.empty()) { onSelectEdge(viewStartIndex + offset) }
-                .pos(leftPos + 16 + offset * 26, topPos - 18)
-                .size(4, 16)
-                .build()
-        }
-
-        viewButtons += listOf(
-            button("export") { exportToSystemClipboard() }
-                .pos(leftPos + imageWidth + 2, topPos)
-                .size(128, 16)
-                .build()
-        )
 
         clearGridButton = object : SpriteButton(
             x = (staffMinX + staffMaxX) / 2 - 19,
@@ -141,12 +141,12 @@ class SplicingTableScreen(
             vOffset = 293,
             width = 38,
             height = 25,
-            message = buttonText("clear_grid"),
+            message = buttonText("clear_grid", null),
             onPress = {
                 guiSpellcasting.mixin.`clearPatterns$hexdebug`()
             },
         ) {
-            override val uOffsetHovered get() = uOffset
+            override val uOffsetHovered get() = uOffset - 48
             override val vOffsetHovered get() = vOffset
 
             override val uOffsetDisabled get() = uOffset
@@ -159,44 +159,67 @@ class SplicingTableScreen(
         }.also(::addRenderableWidget)
 
         predicateButtons += listOf(
+            // export hexpattern
+            object : SpriteButton(
+                x = exportButtonX,
+                y = exportButtonY,
+                uOffset = 432,
+                vOffset = 392,
+                width = exportButtonWidth,
+                height = exportButtonHeight,
+                message = buttonText("export", null),
+                onPress = {
+                    exportToSystemClipboard()
+                },
+            ) {
+                override val uOffsetHovered get() = uOffset
+                override val vOffsetHovered get() = vOffset + 32
+
+                override val uOffsetDisabled get() = uOffset
+                override val vOffsetDisabled get() = vOffset + 64
+            } to { // test
+                true
+            },
+
             // move view
 
-            object : SpriteButton(
-                x = leftPos + 4,
-                y = topPos + 25,
-                uOffset = 256,
-                vOffset = 0,
-                width = 10,
-                height = 10,
-                message = buttonText("view_left"),
-                onPress = {
-                    moveView(-1)
-                },
-            ) {
-                // TODO: remove when sam adds a disabled texture lol
-                override val uOffsetDisabled get() = uOffset
-                override val vOffsetDisabled get() = vOffset
-            } to { // test
-                viewStartIndex > 0
-            },
+            *listOf(
+                SplicingTableAction.VIEW_LEFT to { !hasShiftDown() && !hasControlDown() },
+                SplicingTableAction.VIEW_LEFT_PAGE to { hasShiftDown() && !hasControlDown() },
+                SplicingTableAction.VIEW_LEFT_FULL to { hasControlDown() },
+            ).map { (action, shouldBeVisible) ->
+                object : SpriteButton(
+                    x = leftPos + 4,
+                    y = topPos + 25,
+                    uOffset = 256,
+                    vOffset = 0,
+                    width = 10,
+                    height = 10,
+                    message = action.buttonText,
+                    onPress = action.onPress,
+                ) {
+                    override fun testVisible() = shouldBeVisible()
+                } to action.test
+            }.toTypedArray(),
 
-            object : SpriteButton(
-                x = leftPos + 178,
-                y = topPos + 25,
-                uOffset = 266,
-                vOffset = 0,
-                width = 10,
-                height = 10,
-                message = buttonText("view_right"),
-                onPress = {
-                    moveView(1)
-                },
-            ) {
-                override val uOffsetDisabled get() = uOffset
-                override val vOffsetDisabled get() = vOffset
-            } to { // test
-                viewStartIndex < data.lastIndex - IOTA_BUTTONS + 1
-            },
+            *listOf(
+                SplicingTableAction.VIEW_RIGHT to { !hasShiftDown() && !hasControlDown() },
+                SplicingTableAction.VIEW_RIGHT_PAGE to { hasShiftDown() && !hasControlDown() },
+                SplicingTableAction.VIEW_RIGHT_FULL to { hasControlDown() },
+            ).map { (action, shouldBeVisible) ->
+                object : SpriteButton(
+                    x = leftPos + 178,
+                    y = topPos + 25,
+                    uOffset = 266,
+                    vOffset = 0,
+                    width = 10,
+                    height = 10,
+                    message = action.buttonText,
+                    onPress = action.onPress,
+                ) {
+                    override fun testVisible() = shouldBeVisible()
+                } to action.test
+            }.toTypedArray(),
 
             // around main item slot
 
@@ -250,33 +273,25 @@ class SplicingTableScreen(
 
             // right side
 
-            SpriteButton(
+            actionSpriteButton(
                 x = leftPos + 144,
                 y = topPos + 64,
                 uOffset = 284,
                 vOffset = 16,
                 width = 18,
                 height = 11,
-                message = buttonText("select_none"),
-            ) { // onPress
-                selection = null
-            } to { // test
-                selection != null
-            },
+                action = SplicingTableAction.SELECT_NONE,
+            ),
 
-            SpriteButton(
+            actionSpriteButton(
                 x = leftPos + 165,
                 y = topPos + 64,
                 uOffset = 305,
                 vOffset = 16,
                 width = 18,
                 height = 11,
-                message = buttonText("select_all"),
-            ) { // onPress
-                selection = Selection.range(0, data.lastIndex)
-            } to { // test
-                selection?.start != 0 || selection?.end != data.lastIndex
-            },
+                action = SplicingTableAction.SELECT_ALL,
+            ),
 
             actionSpriteButton(
                 x = leftPos + 144,
@@ -322,7 +337,7 @@ class SplicingTableScreen(
 
             *listOf(
                 SplicingTableAction.PASTE_SPLAT to false,
-                SplicingTableAction.PASTE to true,
+                SplicingTableAction.PASTE_VERBATIM to true,
             ).map { (action, needsShiftDown) ->
                 object : SpriteButton(
                     x = leftPos + 27,
@@ -339,14 +354,20 @@ class SplicingTableScreen(
             }.toTypedArray(),
         )
 
-        allButtons.forEach(::addRenderableWidget)
+        for ((button, _) in predicateButtons) {
+            addRenderableWidget(button)
+        }
 
         val iotaButtons = (0 until IOTA_BUTTONS).map { offset ->
             addRenderableWidget(IotaButton(offset))
         }
 
         for (button in iotaButtons) {
-            addRenderableOnly(IotaSelection(button))
+            addRenderableOnly(IotaRangeSelection(button))
+        }
+
+        for (offset in 0 until IOTA_BUTTONS + 1) {
+            addRenderableWidget(IotaEdgeSelection(offset))
         }
 
         addRenderableWidget(
@@ -361,6 +382,59 @@ class SplicingTableScreen(
             )
         )
 
+        // cast hex (enlightened)
+        addRenderableWidget(
+            object : SpriteButton(
+                x = castButtonX,
+                y = castButtonY,
+                uOffset = 460,
+                vOffset = 392,
+                width = castButtonWidth,
+                height = castButtonHeight,
+                message = buttonText(
+                    "cast.named",
+                    HexDebugClientConfig.config.splicingTableKeybinds.enlightened.cast,
+                    title,
+                ),
+                onPress = {
+                    menu.table.castHex(null)
+                    castingCooldown = maxCastingCooldown
+                },
+            ) {
+                override val uOffsetHovered get() = uOffset
+                override val vOffsetHovered get() = vOffset + 32
+
+                override val uOffsetDisabled get() = uOffset
+                override val vOffsetDisabled get() = vOffset + 64
+
+                override fun testVisible() = data.isEnlightened
+
+                override fun render(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, partialTick: Float) {
+                    active = canCastIgnoringCooldown && castingCooldown <= 0
+                    super.render(guiGraphics, mouseX, mouseY, partialTick)
+                }
+
+                override fun renderWidget(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, partialTick: Float) {
+                    if (castingCooldown > 0) {
+                        val (uOffset, vOffset) = when {
+                            canCastIgnoringCooldown -> Pair(uOffset, vOffset)
+                            else -> Pair(uOffsetDisabled, vOffsetDisabled)
+                        }
+                        blitSprite(guiGraphics, x, y, uOffset, vOffset, width, height)
+
+                        val cooldownPercent = ((castingCooldown - minecraft!!.frameTime) / maxCastingCooldown.toFloat()).coerceIn(0f, 1f)
+                        if (cooldownPercent > 0f) {
+                            val minY = y + floor(height * (1f - cooldownPercent)).toInt()
+                            val maxY = minY + ceil(height * cooldownPercent).toInt()
+                            guiGraphics.fill(RenderType.guiOverlay(), x, minY, x + width, maxY, Int.MAX_VALUE)
+                        }
+                    } else {
+                        super.renderWidget(guiGraphics, mouseX, mouseY, partialTick)
+                    }
+                }
+            }
+        )
+
         reloadData()
     }
 
@@ -369,33 +443,24 @@ class SplicingTableScreen(
         minecraft?.keyboardHandler?.clipboard = export
     }
 
-    private fun moveView(direction: Int) {
-        viewStartIndex = if (hasControlDown()) {
-            // start/end
-            if (direction >= 0) {
-                data.lastIndex
-            } else {
-                0
-            }
-        } else if (hasShiftDown()) {
-            // full screen
-            viewStartIndex + direction * IOTA_BUTTONS
-        } else {
-            // single iota
-            viewStartIndex + direction
+    // state sync
+
+    // hack: since we're storing these in the container data, we can't send our own packet to trigger a reload, otherwise it desyncs
+    // so just check every tick
+    private fun pollForChanges() {
+        if (selection != prevSelection || viewStartIndex != prevViewStartIndex) {
+            prevSelection = selection
+            prevViewStartIndex = viewStartIndex
+            prevMedia = menu.media
+            reloadData()
+        } else if (prevMedia != menu.media) {
+            prevMedia = menu.media
+            updateActiveButtons()
         }
     }
 
-    // state sync
-
     fun reloadData() {
-        if (!data.isListReadable) {
-            // these conditions are necessary to avoid an infinite loop
-            if (selection != null) selection = null
-            if (viewStartIndex != 0) viewStartIndex = 0
-        }
         updateActiveButtons()
-        updateIotaButtons()
         for (child in children()) {
             if (child is SplicingTableButton) {
                 child.reload()
@@ -404,52 +469,8 @@ class SplicingTableScreen(
     }
 
     private fun updateActiveButtons() {
-        val data = data
-        if (data.isListReadable) {
-            setActive(listReadButtons, true)
-            for ((button, predicate) in predicateButtons) {
-                button.active = predicate()
-            }
-        } else {
-            setActive(allButtons, false)
-        }
-    }
-
-    private fun setActive(buttons: Sequence<AbstractButton>, active: Boolean) {
-        for (button in buttons) {
-            button.active = active
-        }
-    }
-
-    private fun updateIotaButtons() {
-        iotaButtons.forEachIndexed { offset, button ->
-            val index = viewStartIndex + offset
-            val formats = if (isIotaSelected(index)) {
-                arrayOf(ChatFormatting.BOLD, ChatFormatting.UNDERLINE)
-            } else {
-                arrayOf()
-            }
-            button.apply {
-                val iotaView = data.list?.getOrNull(index)
-                if (null != iotaView) {
-                    message = index.toString().asTranslatedComponent.withStyle(*formats)
-                    tooltip = Tooltip.create(iotaView.name)
-                } else {
-                    message = Component.empty()
-                    tooltip = null
-                    active = false
-                }
-            }
-        }
-
-        edgeButtons.forEachIndexed { offset, button ->
-            val index = viewStartIndex + offset
-            button.apply {
-                setAlpha(if (isEdgeSelected(index)) 1f else 0.3f)
-                if (!(data.isInRange(index) || data.isInRange(index - 1))) {
-                    active = false
-                }
-            }
+        for ((button, predicate) in predicateButtons) {
+            button.active = data.isListReadable && predicate()
         }
     }
 
@@ -485,54 +506,136 @@ class SplicingTableScreen(
         onPress = action.onPress,
     ) to action.test
 
-    private val SplicingTableAction.buttonText get() = buttonText(name.lowercase())
+    private val SplicingTableAction.buttonText get() =
+        buttonText(name.lowercase(), HexDebugClientConfig.config.splicingTableKeybinds.getKeyForAction(this))
 
-    private val SplicingTableAction.onPress get(): () -> Unit = { menu.table.runAction(this, null, selection) }
+    private val SplicingTableAction.onPress get(): () -> Unit = { menu.table.runAction(this, null) }
 
-    private val SplicingTableAction.test get(): () -> Boolean = { value.test(data, selection) }
+    private val SplicingTableAction.test get(): () -> Boolean =
+        { value.test(data, selection, viewStartIndex) && (!value.consumesMedia || hasMediaForAction) }
 
     // GUI functionality
 
-    private fun isIotaSelected(index: Int) = selection?.let { index in it } ?: false
-
-    private fun isOnlyIotaSelected(index: Int) = selection?.let { it.size == 1 && it.from == index } ?: false
-
-    private fun isEdgeSelected(index: Int) = selection?.let { it.start == index && it.end == null } ?: false
+    private fun isEdgeInRange(index: Int) =
+        // cell to the right is in range
+        data.isInRange(index)
+        // cell to the left is in range
+        || data.isInRange(index - 1)
+        // allow selecting leftmost edge of empty list
+        || (index == 0 && data.list?.size == 0)
 
     private fun onSelectIota(index: Int) {
-        if (!data.isInRange(index)) return
-
-        val selection = selection
-        this.selection = if (isOnlyIotaSelected(index)) {
-            null
-        } else if (Screen.hasShiftDown() && selection != null) {
-            if (selection is Selection.Edge && index < selection.from) {
-                Selection.of(selection.from - 1, index)
-            } else {
-                Selection.of(selection.from, index)
-            }
-        } else {
-            Selection.withSize(index, 1)
-        }
+        menu.table.selectIndex(
+            player = null,
+            index = index,
+            hasShiftDown = hasShiftDown(),
+            isIota = true,
+        )
     }
 
     private fun onSelectEdge(index: Int) {
-        if (!(data.isInRange(index) || data.isInRange(index - 1))) return
+        menu.table.selectIndex(
+            player = null,
+            index = index,
+            hasShiftDown = hasShiftDown(),
+            isIota = false,
+        )
+    }
 
-        val selection = selection
-        this.selection = if (isEdgeSelected(index)) {
-            null
-        } else if (Screen.hasShiftDown() && selection != null) {
-            if (selection is Selection.Edge && index < selection.from) {
-                Selection.of(selection.from - 1, index)
-            } else if (index > selection.from) {
-                Selection.of(selection.from, index - 1)
-            } else {
-                Selection.of(selection.from, index)
+    override fun keyPressed(keyCode: Int, scanCode: Int, modifiers: Int): Boolean {
+        val keybinds = HexDebugClientConfig.config.splicingTableKeybinds
+
+        if (keybinds.enabled) {
+            if (keybinds.sendHexicalTelepathy) {
+                sendHexicalKeyEvent(minecraft!!, keyCode, scanCode, isPressed = true)
+            }
+
+            // AbstractContainerScreen.keyPressed always returns true, so check our keys first
+            if (keyPressedInner(keyCode, scanCode)) return true
+
+            if (keybinds.overrideVanillaArrowKeys) {
+                when (keyCode) {
+                    GLFW.GLFW_KEY_UP,
+                    GLFW.GLFW_KEY_DOWN,
+                    GLFW.GLFW_KEY_LEFT,
+                    GLFW.GLFW_KEY_RIGHT -> return true
+                }
+            }
+        }
+
+        return super.keyPressed(keyCode, scanCode, modifiers)
+    }
+
+    private fun keyPressedInner(keyCode: Int, scanCode: Int): Boolean {
+        val keybinds = HexDebugClientConfig.config.splicingTableKeybinds
+
+        if (
+            keybinds.enlightened.cast.inner.matchesKey(keyCode, scanCode)
+            && canCastIgnoringCooldown
+            && castingCooldown <= 0
+        ) {
+            menu.table.castHex(null)
+            castingCooldown = maxCastingCooldown
+            playButtonClick()
+            return true
+        }
+
+        val action = keybinds.getActionForKey(keyCode, scanCode)
+            ?: return false
+
+        if (data.isListReadable && action.test()) {
+            action.onPress()
+            playButtonClick()
+            return true
+        }
+        return false
+    }
+
+    private fun playButtonClick() {
+        minecraft!!.soundManager.play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1f))
+    }
+
+    override fun keyReleased(keyCode: Int, scanCode: Int, modifiers: Int): Boolean {
+        val keybinds = HexDebugClientConfig.config.splicingTableKeybinds
+        if (keybinds.enabled && keybinds.sendHexicalTelepathy) {
+            sendHexicalKeyEvent(minecraft!!, keyCode, scanCode, isPressed = false)
+        }
+        return super.keyReleased(keyCode, scanCode, modifiers)
+    }
+
+    // TODO: limit scroll to certain regions? (let's see if anyone complains first)
+    override fun mouseScrolled(mouseX: Double, mouseY: Double, delta: Double): Boolean {
+        if (super.mouseScrolled(mouseX, mouseY, delta)) return true
+
+        val adjustedDelta = if (HexDebugClientConfig.config.splicingTable.invertScrollDirection) {
+            delta * -1
+        } else {
+            delta
+        }
+
+        val action = if (adjustedDelta > 0) {
+            when {
+                hasControlDown() -> SplicingTableAction.VIEW_LEFT_FULL
+                hasShiftDown() -> SplicingTableAction.VIEW_LEFT_PAGE
+                else -> SplicingTableAction.VIEW_LEFT
             }
         } else {
-            Selection.edge(index)
+            when {
+                hasControlDown() -> SplicingTableAction.VIEW_RIGHT_FULL
+                hasShiftDown() -> SplicingTableAction.VIEW_RIGHT_PAGE
+                else -> SplicingTableAction.VIEW_RIGHT
+            }
         }
+
+        if (!action.test()) return false
+
+        // hack: limit scrolls per tick to 4 (arbitrary) to prevent DoS
+        // (this could be easily solved by adding a new packet, but lazy)
+        repeat(min(delta.absoluteValue.roundToInt(), 4)) {
+            menu.table.runAction(action, null)
+        }
+
+        return true
     }
 
     // staff delegation stuff
@@ -542,6 +645,13 @@ class SplicingTableScreen(
             guiSpellcasting.mouseClicked(mouseX, mouseY, button)
         }
         return super.mouseClicked(mouseX, mouseY, button)
+    }
+
+    override fun mouseMoved(mouseX: Double, mouseY: Double) {
+        if (hasStaffItem && isInStaffGrid(mouseX, mouseY, button = null)) {
+            guiSpellcasting.mouseMoved(mouseX, mouseY)
+        }
+        super.mouseMoved(mouseX, mouseY)
     }
 
     override fun mouseDragged(mouseX: Double, mouseY: Double, button: Int, dragX: Double, dragY: Double): Boolean {
@@ -566,12 +676,18 @@ class SplicingTableScreen(
         super.onClose()
     }
 
-    private fun isInStaffGrid(mouseX: Double, mouseY: Double, button: Int) =
+    private fun isInStaffGrid(mouseX: Double, mouseY: Double, button: Int?) =
         staffMinX <= mouseX && mouseX <= staffMaxX && staffMinY <= mouseY && mouseY <= staffMaxY
         // avoid interacting with the grid when inserting the staff item...
-        && hasClickedOutside(mouseX, mouseY, leftPos, topPos, button)
+        && (button == null || isOutsideStaffItemSlot(mouseX, mouseY, leftPos, topPos))
         // or when clicking the clear grid button
         && !(clearGridButton?.testHitbox(mouseX, mouseY) ?: false)
+
+    private fun isOutsideStaffItemSlot(mouseX: Double, mouseY: Double, guiLeft: Int, guiTop: Int) =
+        mouseX < guiLeft + staffSlotMinXOffset
+        || mouseY < guiTop + staffSlotMinYOffset
+        || mouseX >= guiLeft + staffSlotMaxXOffset
+        || mouseY >= guiTop + staffSlotMaxYOffset
 
     override fun hasClickedOutside(
         mouseX: Double,
@@ -584,20 +700,31 @@ class SplicingTableScreen(
             // main gui
             super.hasClickedOutside(mouseX, mouseY, guiLeft, guiTop, mouseButton)
             // storage/media
-            && (mouseX < guiLeft + 192 || mouseY < guiTop + 103 || mouseX >= guiLeft + 192 + 46 || mouseY >= guiTop + 103 + 87)
-            // staff
-            && (mouseX < guiLeft - 22 || mouseY < guiTop + 167 || mouseX >= guiLeft - 22 + 20 || mouseY >= guiTop + 167 + 20)
+            && (
+                mouseX < guiLeft + storageMinXOffset
+                || mouseY < guiTop + storageMinYOffset
+                || mouseX >= guiLeft + storageMaxXOffset
+                || mouseY >= guiTop + storageMaxYOffset
+            )
+            // staff item slot
+            && isOutsideStaffItemSlot(mouseX, mouseY, guiLeft, guiTop)
         )
     }
 
     // rendering
 
-    override fun render(poseStack: PoseStack, mouseX: Int, mouseY: Int, partialTick: Float) {
-        staffButtons.forEach { it.visible = hasStaffItem }
+    override fun containerTick() {
+        super.containerTick()
+        pollForChanges()
+        if (castingCooldown > 0) {
+            castingCooldown -= 1
+        }
+    }
 
-        renderBackground(poseStack)
-        super.render(poseStack, mouseX, mouseY, partialTick)
-        renderTooltip(poseStack, mouseX, mouseY)
+    override fun render(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, partialTick: Float) {
+        renderBackground(guiGraphics)
+        super.render(guiGraphics, mouseX, mouseY, partialTick)
+        renderTooltip(guiGraphics, mouseX, mouseY)
     }
 
     override fun renderBg(poseStack: PoseStack, partialTick: Float, mouseX: Int, mouseY: Int) {
@@ -614,7 +741,7 @@ class SplicingTableScreen(
             // dust background
             blitSprite(poseStack, x = leftPos + 205, y = topPos + 169, uOffset = 461, vOffset = 328, width = 16, height = 16)
         }
-        if (menu.media > 0) {
+        if (hasMediaForAction) {
             // sparkly stars
             blitSprite(poseStack, x = leftPos + 193, y = topPos + 170, uOffset = 449, vOffset = 328, width = 10, height = 14)
         }
@@ -650,10 +777,10 @@ class SplicingTableScreen(
             blitSprite(poseStack, x = staffMaxX - 1, y = staffMaxY - 1, uOffset = 184, vOffset = 9, width = 8, height = 9)
 
             // staff slot without icon
-            blitSprite(poseStack, x = leftPos - 24, y = topPos + 165, uOffset = 232, vOffset = 293, width = 23, height = 24)
+            blitSprite(guiGraphics, x = staffSlotMinX, y = staffSlotMinY, uOffset = 232, vOffset = 293, width = staffSlotWidth, height = staffSlotHeight)
         } else {
             // staff slot with icon
-            blitSprite(poseStack, x = leftPos - 24, y = topPos + 165, uOffset = 232, vOffset = 328, width = 23, height = 24)
+            blitSprite(guiGraphics, x = staffSlotMinX, y = staffSlotMinY, uOffset = 232, vOffset = 328, width = staffSlotWidth, height = staffSlotHeight)
         }
     }
 
@@ -676,10 +803,10 @@ class SplicingTableScreen(
     companion object {
         val TEXTURE = HexDebug.id("textures/gui/splicing_table.png")
 
-        const val IOTA_BUTTONS = 9
-
         const val MAX_DIGIT_LEN = 4
         val MAX_DIGIT = 10f.pow(MAX_DIGIT_LEN).toInt() - 1
+
+        private val maxCastingCooldown get() = HexDebugServerConfig.config.splicingTableCastingCooldown
 
         fun getInstance() = Minecraft.getInstance().screen as? SplicingTableScreen
 
@@ -729,31 +856,49 @@ class SplicingTableScreen(
             blit(poseStack, TEXTURE, x, y, uOffset.toFloat(), vOffset.toFloat(), width, height, 512, 512)
         }
 
-        // TODO: remove when we have icons for the remaining buttons
-        fun button(name: String, onPress: Button.OnPress): Button.Builder {
-            val message = buttonKey(name).asTranslatedComponent
-            return Button.builder(message, onPress)
-                .tooltip(Tooltip.create(message))
+        fun buttonText(name: String, key: ConfigModifierKey?, vararg args: Any): Component {
+            val text = buttonKey(name).asTranslatedComponent(*args)
+            if (key == null) return text
+            return text.append("\n").append(key.inner.localizedName.copy().gray.italic)
         }
 
-        fun buttonText(name: String, vararg args: Any) = buttonKey(name).asTranslatedComponent(*args)
+        @JvmStatic
         fun tooltipText(name: String, vararg args: Any) = tooltipKey(name).asTranslatedComponent(*args)
 
-        fun buttonKey(name: String) = splicingTableKey("button.$name")
-        fun tooltipKey(name: String) = splicingTableKey("tooltip.$name")
-        fun splicingTableKey(name: String) = "text.hexdebug.splicing_table.$name"
+        private fun buttonKey(name: String) = splicingTableKey("button.$name")
+        private fun tooltipKey(name: String) = splicingTableKey("tooltip.$name")
+        private fun splicingTableKey(name: String) = "text.hexdebug.splicing_table.$name"
     }
 
     inner class IotaButton(val offset: Int) : BaseIotaButton(
         x = leftPos + 15 + 18 * offset,
         y = topPos + 20,
     ) {
-        override val index get() = viewStartIndex + offset
+        val index get() = viewStartIndex + offset
 
         override val iotaView get() = data.list?.getOrNull(index)
 
+        private var wasLastSelection = false
+
         override fun onPress() {
             onSelectIota(index)
+        }
+
+        override fun testHitbox(mouseX: Double, mouseY: Double): Boolean {
+            // skip hitbox if hovering over an edge selection
+            // FIXME: hack
+            return super.testHitbox(mouseX, mouseY) && mouseX >= x + 2 && mouseX < x + width - 2
+        }
+
+        override fun updateFocus() {
+            val selection = selection
+            val isLastSelection = data.isInRange(index)
+                && selection is Selection.Range
+                && index == selection.to
+            if (isLastSelection != wasLastSelection) {
+                wasLastSelection = isLastSelection
+                isFocused = isLastSelection && Minecraft.getInstance().lastInputType.isKeyboard
+            }
         }
 
         init {
@@ -761,58 +906,32 @@ class SplicingTableScreen(
         }
     }
 
-    inner class IotaSelection(button: IotaButton) : Widget {
+    // TODO: hover texture?
+    inner class IotaRangeSelection(button: IotaButton) : Renderable {
         private val offset by button::offset
         private val index by button::index
-        private val backgroundType by button::backgroundType
 
-        override fun render(poseStack: PoseStack, mouseX: Int, mouseY: Int, partialTick: Float) {
-            if (!data.isInRange(index) || backgroundType == null) return
-            RenderSystem.enableBlend()
-            when (val selection = selection) {
-                is Selection.Range -> if (index in selection) {
-                    drawRangeSelection(
-                        poseStack, offset,
-                        leftEdge = index == selection.start,
-                        rightEdge = index == selection.end,
-                    )
+        override fun render(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, partialTick: Float) {
+            val selection = selection
+            if (data.isInRange(index) && selection is Selection.Range && index in selection) {
+                RenderSystem.enableBlend()
+                blitSprite(
+                    guiGraphics,
+                    x = leftPos + 15 + 18 * offset,
+                    y = topPos + 18,
+                    uOffset = 352,
+                    vOffset = 24,
+                    width = 18,
+                    height = 25,
+                )
+                if (index == selection.start) {
+                    drawSelectionEndCap(guiGraphics, offset, SelectionEndCap.LEFT)
                 }
-                is Selection.Edge -> if (index == selection.index) {
-                    drawEdgeSelection(poseStack, offset)
+                if (index == selection.end) {
+                    drawSelectionEndCap(guiGraphics, offset, SelectionEndCap.RIGHT)
                 }
-                null -> {}
+                RenderSystem.disableBlend()
             }
-            RenderSystem.disableBlend()
-        }
-
-        private fun drawRangeSelection(poseStack: PoseStack, offset: Int, leftEdge: Boolean, rightEdge: Boolean) {
-            blitSprite(
-                poseStack,
-                x = leftPos + 15 + 18 * offset,
-                y = topPos + 18,
-                uOffset = 352,
-                vOffset = 24,
-                width = 18,
-                height = 25,
-            )
-            if (leftEdge) {
-                drawSelectionEndCap(poseStack, offset, SelectionEndCap.LEFT)
-            }
-            if (rightEdge) {
-                drawSelectionEndCap(poseStack, offset, SelectionEndCap.RIGHT)
-            }
-        }
-
-        private fun drawEdgeSelection(poseStack: PoseStack, offset: Int) {
-            blitSprite(
-                poseStack,
-                x = leftPos + 13 + 18 * offset,
-                y = topPos + 23,
-                uOffset = 375,
-                vOffset = 29,
-                width = 4,
-                height = 15,
-            )
         }
 
         private fun drawSelectionEndCap(poseStack: PoseStack, offset: Int, endCap: SelectionEndCap) {
@@ -825,6 +944,39 @@ class SplicingTableScreen(
                 width = 1,
                 height = 13,
             )
+        }
+    }
+
+    inner class IotaEdgeSelection(private val offset: Int) : SplicingTableButton(
+        x = leftPos + 13 + 18 * offset,
+        y = topPos + 23,
+        width = 4,
+        height = 15,
+        message = null,
+    ) {
+        override val uOffset = 375
+        override val vOffset = 29
+
+        override val uOffsetHovered get() = uOffset
+        override val vOffsetHovered get() = vOffset + 405
+
+        override val uOffsetDisabled get() = uOffset
+        override val vOffsetDisabled get() = vOffset
+
+        private val index get() = viewStartIndex + offset
+
+        override fun testVisible() = isEdgeInRange(index)
+
+        override fun renderWidget(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, partialTick: Float) {
+            if (isHovered || index == (selection as? Selection.Edge)?.index) {
+                RenderSystem.enableBlend()
+                super.renderWidget(guiGraphics, mouseX, mouseY, partialTick)
+                RenderSystem.disableBlend()
+            }
+        }
+
+        override fun onPress() {
+            onSelectEdge(index)
         }
     }
 }

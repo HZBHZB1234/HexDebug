@@ -5,8 +5,7 @@ import at.petrak.hexcasting.api.utils.asTextComponent
 import at.petrak.hexcasting.api.utils.asTranslatedComponent
 import at.petrak.hexcasting.api.utils.mediaBarColor
 import at.petrak.hexcasting.api.utils.styledWith
-import com.mojang.blaze3d.vertex.PoseStack
-import gay.`object`.hexdebug.blocks.splicing.SplicingTableBlockEntity
+import gay.`object`.hexdebug.config.HexDebugServerConfig
 import gay.`object`.hexdebug.gui.splicing.SplicingTableMenu
 import gay.`object`.hexdebug.gui.splicing.SplicingTableScreen
 import net.minecraft.client.gui.components.AbstractWidget
@@ -28,7 +27,7 @@ class MediaBar(
     height: Int,
 ) : AbstractWidget(x, y, width, height, Component.empty()) {
     private val media by menu::media
-    private val maxMedia get() = SplicingTableBlockEntity.maxMedia
+    private val maxMedia get() = HexDebugServerConfig.config.splicingTableMaxMedia
     private val fullness get() = if (maxMedia > 0) media.toDouble() / maxMedia else 0.0
 
     override fun renderButton(poseStack: PoseStack, mouseX: Int, mouseY: Int, partialTick: Float) {

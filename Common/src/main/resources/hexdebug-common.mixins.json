@@ -5,18 +5,26 @@
   "minVersion": "0.8",
   "client": [
     "MixinGuiSpellcasting",
+    "MixinScreen",
     "MixinShiftScrollListener"
   ],
   "mixins": [
-    "MixinCastingContext",
-    "MixinDoMishap",
-    "MixinFrameEvaluate",
-    "MixinMsgNewSpellPatternSyn",
-    "MixinMsgShiftScrollSyn",
+    "MixinBlockEntityAbstractImpetus",
+    "MixinBlockSlate",
+    "MixinCastingEnvironment",
+    "MixinCircleExecutionState",
+    "MixinDatagenMain",
+    "MixinMsgShiftScrollC2S",
+    "MixinOpBrainsweepSpell",
     "MixinOpEval",
-    "MixinOpPrintSpell"
+    "MixinOpImpetusDir",
+    "MixinOpImpetusPos",
+    "MixinPlayerBasedCastEnv",
+    "MixinStaffCastEnv",
+    "interop.emi.MixinEmiScreenManager"
   ],
-  "injectors": {
-    "defaultRequire": 1
+  "plugin": "gay.object.hexdebug.mixin.HexDebugMixinConfigPlugin",
+  "mixinextras": {
+    "minVersion": "0.5.0"
   }
 }

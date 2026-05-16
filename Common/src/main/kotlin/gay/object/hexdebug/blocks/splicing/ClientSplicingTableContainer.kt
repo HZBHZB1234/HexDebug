@@ -3,26 +3,32 @@ package gay.`object`.hexdebug.blocks.splicing
 import at.petrak.hexcasting.api.spell.casting.ResolvedPatternType
 import at.petrak.hexcasting.api.spell.math.HexPattern
 import gay.`object`.hexdebug.networking.msg.MsgSplicingTableActionC2S
+import gay.`object`.hexdebug.networking.msg.MsgSplicingTableCastHexC2S
 import gay.`object`.hexdebug.networking.msg.MsgSplicingTableNewStaffPatternC2S
+import gay.`object`.hexdebug.networking.msg.MsgSplicingTableSelectIndexC2S
 import gay.`object`.hexdebug.splicing.ISplicingTable
-import gay.`object`.hexdebug.splicing.Selection
 import gay.`object`.hexdebug.splicing.SplicingTableAction
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.SimpleContainer
-import net.minecraft.world.item.ItemStack
 
 class ClientSplicingTableContainer : SimpleContainer(SplicingTableItemSlot.container_size), ISplicingTable {
     override fun getClientView() = null
-    override fun listStackChanged(stack: ItemStack) {}
-    override fun clipboardStackChanged(stack: ItemStack) {}
 
     /** Called on the client. */
-    override fun runAction(action: SplicingTableAction, player: ServerPlayer?, selection: Selection?) = selection.also {
-        MsgSplicingTableActionC2S(action, it).sendToServer()
+    override fun runAction(action: SplicingTableAction, player: ServerPlayer?) {
+        MsgSplicingTableActionC2S(action).sendToServer()
     }
 
-    override fun drawPattern(player: ServerPlayer?, pattern: HexPattern, index: Int, selection: Selection?): Pair<Selection?, ResolvedPatternType> {
-        MsgSplicingTableNewStaffPatternC2S(pattern, index, selection).sendToServer()
-        return selection to ResolvedPatternType.UNRESOLVED
+    override fun drawPattern(player: ServerPlayer?, pattern: HexPattern, index: Int): ResolvedPatternType {
+        MsgSplicingTableNewStaffPatternC2S(pattern, index).sendToServer()
+        return ResolvedPatternType.UNRESOLVED
+    }
+
+    override fun selectIndex(player: ServerPlayer?, index: Int, hasShiftDown: Boolean, isIota: Boolean) {
+        MsgSplicingTableSelectIndexC2S(index, hasShiftDown = hasShiftDown, isIota = isIota).sendToServer()
+    }
+
+    override fun castHex(player: ServerPlayer?) {
+        MsgSplicingTableCastHexC2S().sendToServer()
     }
 }

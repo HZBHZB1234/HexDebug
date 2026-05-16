@@ -1,8 +1,9 @@
 package gay.object.hexdebug.mixin;
 
 import at.petrak.hexcasting.client.ShiftScrollListener;
-import gay.object.hexdebug.config.HexDebugConfig;
+import gay.object.hexdebug.config.HexDebugClientConfig;
 import gay.object.hexdebug.items.DebuggerItem;
+import gay.object.hexdebug.items.base.ShiftScrollable;
 import gay.object.hexdebug.registry.HexDebugItems;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.item.Item;
@@ -28,7 +29,8 @@ public abstract class MixinShiftScrollListener {
 
     @Inject(method = "IsScrollableItem", at = @At("RETURN"), cancellable = true)
     private static void hexdebug$IsScrollableItem(Item item, CallbackInfoReturnable<Boolean> cir) {
-        if (item == HexDebugItems.DEBUGGER.getValue()) {
+        var isCtrl = Minecraft.getInstance().options.keySprint.isDown();
+        if (item instanceof ShiftScrollable scrollable && scrollable.canShiftScroll(isCtrl)) {
             cir.setReturnValue(true);
         }
     }
@@ -43,9 +45,9 @@ public abstract class MixinShiftScrollListener {
             && (player.isShiftKeyDown() || !needsSneaking)
             && !player.isSpectator()
             // additional logic
-            && HexDebugConfig.INSTANCE.getClient().getSmartDebuggerSneakScroll()
-            && !DebuggerItem.isDebugging()
+            && HexDebugClientConfig.getConfig().getSmartDebuggerSneakScroll()
             && player.getMainHandItem().getItem() == HexDebugItems.DEBUGGER.getValue()
+            && !DebuggerItem.isDebugging(player.getMainHandItem())
             && hexdebug$invokeIsScrollableItem(player.getOffhandItem().getItem())
         ) {
             offHandDelta += delta;

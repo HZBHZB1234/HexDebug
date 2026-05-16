@@ -27,6 +27,8 @@ repositories {
     maven { url = uri("https://dl.cloudsmith.io/public/geckolib3/geckolib/maven") }
     maven { url = uri("https://maven.parchmentmc.org") }
     maven { url = uri("https://pkgs.dev.azure.com/djtheredstoner/DevAuth/_packaging/public/maven/v1") }
+    maven { url = uri("https://maven.kosmx.dev/") }
+    maven { url = uri("https://maven.hexxy.media") }
     exclusiveContent {
         forRepository {
             maven { url = uri("https://api.modrinth.com/maven") }

@@ -13,3 +13,4 @@ fun <T : Any> initRegistry(registrar: HexDebugRegistrar<T>) {
         }
     }
 }
+

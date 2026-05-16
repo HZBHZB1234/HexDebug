@@ -6,6 +6,7 @@ import gay.`object`.hexdebug.items.FocusHolderBlockItem
 import net.minecraft.core.Registry
 import net.minecraft.world.item.BlockItem
 import net.minecraft.world.item.Item
+import net.minecraft.world.level.ItemLike
 import net.minecraft.world.level.block.Block
 import net.minecraft.world.level.block.Blocks
 import net.minecraft.world.item.Item.Properties as ItemProperties
@@ -14,13 +15,18 @@ import net.minecraft.world.level.block.state.BlockBehaviour.Properties as BlockP
 object HexDebugBlocks : HexDebugRegistrar<Block>(Registry.BLOCK_REGISTRY, { Registry.BLOCK }) {
     @JvmField
     val SPLICING_TABLE = blockItem("splicing_table", HexDebugItems.props) {
-        SplicingTableBlock(slateish)
+        SplicingTableBlock(slateish.noPush(), enlightened = false)
+    }
+
+    @JvmField
+    val ENLIGHTENED_SPLICING_TABLE = blockItem("enlightened_splicing_table", HexDebugItems.props) {
+        SplicingTableBlock(slateish.noPush(), enlightened = true)
     }
 
     @JvmField
     val FOCUS_HOLDER = blockItem(
         "focus_holder",
-        blockBuilder = { FocusHolderBlock(slateish) },
+        blockBuilder = { FocusHolderBlock(slateish.pushReaction(PushReaction.DESTROY)) },
         itemBuilder = { FocusHolderBlockItem(it, HexDebugItems.props) },
     )
 
@@ -42,8 +48,11 @@ object HexDebugBlocks : HexDebugRegistrar<Block>(Registry.BLOCK_REGISTRY, { Regi
     class BlockItemEntry<B : Block, I : Item>(
         blockEntry: Entry<B>,
         val itemEntry: HexDebugRegistrar<Item>.Entry<I>,
-    ) : Entry<B>(blockEntry) {
+    ) : Entry<B>(blockEntry), ItemLike {
         val block by ::value
         val item by itemEntry::value
+        val itemKey by itemEntry::key
+
+        override fun asItem() = item
     }
 }

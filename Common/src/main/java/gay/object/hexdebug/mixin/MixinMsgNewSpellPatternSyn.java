@@ -28,7 +28,7 @@ public abstract class MixinMsgNewSpellPatternSyn {
         var msg = (MsgNewSpellPatternSyn) (Object) this;
 
         var item = sender.getItemInHand(msg.handUsed()).getItem();
-        if (item != HexDebugItems.EVALUATOR.getValue()) return;
+        if (!(item instanceof EvaluatorItem)) return;
 
         // FIXME: copied from handleNewPatternOnServer because I can't figure out how to inject before getStaffcastVM
 

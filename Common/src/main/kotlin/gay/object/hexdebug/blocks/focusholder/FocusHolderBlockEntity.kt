@@ -4,14 +4,17 @@ import at.petrak.hexcasting.api.addldata.ADIotaHolder
 import at.petrak.hexcasting.api.block.HexBlockEntity
 import at.petrak.hexcasting.api.spell.iota.Iota
 import at.petrak.hexcasting.xplat.IXplatAbstractions
+import gay.`object`.hexdebug.api.HexDebugTags
 import gay.`object`.hexdebug.blocks.base.BaseContainer
 import gay.`object`.hexdebug.blocks.base.ContainerSlotDelegate
-import gay.`object`.hexdebug.blocks.focusholder.FocusHolderBlock.Companion.HAS_ITEM
 import gay.`object`.hexdebug.registry.HexDebugBlockEntities
+import gay.`object`.hexdebug.utils.isIotaHolder
 import gay.`object`.hexdebug.utils.isNotEmpty
+import gay.`object`.hexdebug.utils.setPropertyIfChanged
 import net.minecraft.core.BlockPos
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.world.ContainerHelper
+import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.block.state.BlockState
 
 class FocusHolderBlockEntity(pos: BlockPos, state: BlockState) :
@@ -24,6 +27,8 @@ class FocusHolderBlockEntity(pos: BlockPos, state: BlockState) :
 
     private val iotaHolder get() = IXplatAbstractions.INSTANCE.findDataHolder(iotaStack)
 
+    val analogOutputSignal get() = if (isEmpty) 0 else 15
+
     override fun loadModData(tag: CompoundTag) {
         stacks.clear() // without this, removing the item on the server doesn't remove it on the client
         ContainerHelper.loadAllItems(tag, stacks)
@@ -35,12 +40,25 @@ class FocusHolderBlockEntity(pos: BlockPos, state: BlockState) :
 
     override fun readIotaTag() = iotaHolder?.readIotaTag()
 
-    override fun writeIota(iota: Iota?, simulate: Boolean) = iotaHolder?.writeIota(iota, simulate) ?: false
+    override fun writeIota(iota: Iota?, simulate: Boolean): Boolean {
+        val success = iotaHolder?.writeIota(iota, simulate) ?: false
+        if (!simulate && success) {
+            sync() // sync container to clients, eg. to update scrying lens readout
+        }
+        return success
+    }
+
+    override fun writeable() = iotaHolder?.writeable() ?: false
 
     override fun setChanged() {
         super.setChanged()
-        if (blockState.getValue(HAS_ITEM) != isNotEmpty) {
-            level?.setBlockAndUpdate(blockPos, blockState.setValue(HAS_ITEM, isNotEmpty))
-        }
+        setPropertyIfChanged(FocusHolderBlock.HAS_ITEM, isNotEmpty)
+    }
+
+    override fun canPlaceItem(index: Int, stack: ItemStack): Boolean = isValidItem(stack)
+
+    companion object {
+        fun isValidItem(stack: ItemStack): Boolean =
+            isIotaHolder(stack) && !stack.`is`(HexDebugTags.Items.FOCUS_HOLDER_BLACKLIST)
     }
 }

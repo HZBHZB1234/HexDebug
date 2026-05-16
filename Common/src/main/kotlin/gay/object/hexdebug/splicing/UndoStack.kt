@@ -1,7 +1,7 @@
 package gay.`object`.hexdebug.splicing
 
-import at.petrak.hexcasting.api.spell.iota.Iota
-import gay.`object`.hexdebug.config.HexDebugConfig
+import at.petrak.hexcasting.api.casting.iota.Iota
+import gay.`object`.hexdebug.config.HexDebugServerConfig
 import gay.`object`.hexdebug.utils.Option
 import gay.`object`.hexdebug.utils.Option.Some
 
@@ -11,7 +11,7 @@ data class UndoStack(
 ) {
     val size get() = stack.size
 
-    private val maxSize get() = HexDebugConfig.server.maxUndoStackSize
+    private val maxSize get() = HexDebugServerConfig.config.maxUndoStackSize
 
     fun undo() = moveTo(index - 1)
 
@@ -47,10 +47,10 @@ data class UndoStack(
     ) {
         val isNotEmpty = list is Some || clipboard is Some || selection is Some
 
-        fun applyTo(data: SplicingTableData, defaultSelection: Selection?): Selection? = data.let {
+        fun applyTo(data: SplicingTableData) {
             list.ifPresent(data::writeList)
             clipboard.ifPresent(data::writeClipboard)
-            selection.getOrElse(defaultSelection)
+            selection.ifPresent { data.selection = it }
         }
     }
 }

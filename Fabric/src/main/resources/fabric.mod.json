@@ -3,10 +3,8 @@
   "id": "hexdebug",
   "version": "${modVersion}",
   "name": "HexDebug",
-  "description": "The HexDebug addon for Hex Casting",
-  "authors": [
-    "object-Object"
-  ],
+  "description": "A Hex Casting addon for debugging and editing hexes.",
+  "authors": ["object-Object"],
   "contact": {
     "homepage": "https://hexdebug.hexxy.media",
     "sources": "https://github.com/object-Object/HexDebug"
@@ -23,9 +21,21 @@
       "adapter": "kotlin",
       "value": "gay.object.hexdebug.fabric.FabricHexDebugClient"
     }],
+    "server": [{
+      "adapter": "kotlin",
+      "value": "gay.object.hexdebug.fabric.FabricHexDebugServer"
+    }],
+    "fabric-datagen": [{
+      "adapter": "kotlin",
+      "value": "gay.object.hexdebug.fabric.datagen.FabricHexDebugDatagen"
+    }],
+    "emi": [{
+      "adapter": "kotlin",
+      "value": "gay.object.hexdebug.fabric.interop.FabricHexDebugEmiPlugin"
+    }],
     "modmenu": [{
       "adapter": "kotlin",
-      "value": "gay.object.hexdebug.fabric.FabricHexDebugModMenu"
+      "value": "gay.object.hexdebug.fabric.interop.FabricHexDebugModMenu"
     }]
   },
   "mixins": [
@@ -37,10 +47,16 @@
     "fabric-api": ">=${versions.fabric_api}",
     "fabric-language-kotlin": ">=${versions.kotlin_fabric}",
     "architectury": ">=${versions.architectury}",
-    "hexcasting": ">=${versions.hexcasting}",
-    "cloth-config": ">=${versions.clothConfig}"
+    "hexcasting": ">=${versions.hexcasting_dependency}",
+    "cloth-config": ">=${versions.clothConfig}",
+    "ioticblocks": ">=${versions.ioticblocks}"
   },
   "suggests": {
-    "modmenu": ">=${versions.modMenu}"
+    "emi": ">=${versions.emi}",
+    "modmenu": ">=${versions.modMenu}",
+    "hexical": ">=${versions.hexical}"
+  },
+  "conflicts": {
+    "hexical": "<${versions.hexical}"
   }
 }

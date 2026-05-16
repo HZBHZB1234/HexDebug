@@ -8,9 +8,7 @@ version = "${modVersion}"
 displayName = "HexDebug"
 logoFile = "icon.png"
 authors = "object-Object"
-description = '''
-The HexDebug addon for Hex Casting
-'''
+description = "A Hex Casting addon for debugging and editing hexes."
 
 [[dependencies.hexdebug]]
 modId = "forge"
@@ -43,6 +41,20 @@ side = "BOTH"
 [[dependencies.hexdebug]]
 modId = "hexcasting"
 mandatory = true
-versionRange = "[${versions.hexcasting},)"
+versionRange = "[${versions.hexcasting_dependency},)"
 ordering = "NONE"
 side = "BOTH"
+
+[[dependencies.hexdebug]]
+modId = "ioticblocks"
+mandatory = true
+versionRange = "[${versions.ioticblocks},)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.hexdebug]]
+modId = "emi"
+mandatory = false
+versionRange = "[${versions.emi},)"
+ordering = "NONE"
+side = "CLIENT"

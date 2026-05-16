@@ -1,7 +1,6 @@
-import hexdebug.libs
-
 plugins {
     id("hexdebug.conventions.architectury")
+    id("hexdebug.conventions.dokka")
 }
 
 architectury {
@@ -21,9 +20,18 @@ dependencies {
 
     modApi(libs.clothConfig.common)
 
-    implementation(libs.mixinExtras)
+    libs.mixinExtras.common.also {
+        implementation(it)
+        annotationProcessor(it)
+    }
 
-    api(libs.bundles.lsp4j)
+    implementation(libs.bundles.lsp4j)
 
     implementation(libs.bundles.ktor)
+
+    modImplementation(libs.ioticblocks.common)
+
+    modCompileOnly(libs.emi.xplat)
+
+    api(project(":hexdebug-core-common", "namedElements"))
 }

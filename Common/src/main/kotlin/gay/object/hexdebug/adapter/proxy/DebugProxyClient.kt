@@ -2,8 +2,9 @@ package gay.`object`.hexdebug.adapter.proxy
 
 import dev.architectury.event.events.client.ClientPlayerEvent
 import gay.`object`.hexdebug.HexDebug
-import gay.`object`.hexdebug.config.HexDebugConfig
+import gay.`object`.hexdebug.config.HexDebugClientConfig
 import gay.`object`.hexdebug.items.DebuggerItem
+import gay.`object`.hexdebug.items.EvaluatorItem
 import gay.`object`.hexdebug.networking.msg.MsgDebugAdapterProxy
 import io.ktor.network.selector.*
 import io.ktor.network.sockets.*
@@ -17,6 +18,7 @@ import org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
+import java.net.BindException
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.Executors
 import kotlin.concurrent.thread
@@ -40,8 +42,8 @@ data class DebugProxyClient(val input: InputStream, val output: OutputStream) {
         var instance: DebugProxyClient? = null
             private set
 
-        private val enabled get() = HexDebugConfig.client.openDebugPort
-        private val port get() = HexDebugConfig.client.debugPort
+        private val enabled get() = HexDebugClientConfig.config.openDebugPort
+        private val port get() = HexDebugClientConfig.config.debugPort
 
         private val executorService = Executors.newCachedThreadPool()
 
@@ -50,13 +52,18 @@ data class DebugProxyClient(val input: InputStream, val output: OutputStream) {
         private var serverJob: Job? = null
 
         fun init() {
-            HexDebugConfig.holder.registerSaveListener { _, _ ->
+            HexDebugClientConfig.holder.registerSaveListener { _, _ ->
                 reload()
                 InteractionResult.PASS
             }
             ClientPlayerEvent.CLIENT_PLAYER_JOIN.register {
-                DebuggerItem.debugState = DebuggerItem.DebugState.NOT_DEBUGGING
+                DebuggerItem.debugStates.clear()
+                EvaluatorItem.evalStates.clear()
                 start()
+            }
+            ClientPlayerEvent.CLIENT_PLAYER_RESPAWN.register { _, _ ->
+                DebuggerItem.debugStates.clear()
+                EvaluatorItem.evalStates.clear()
             }
             ClientPlayerEvent.CLIENT_PLAYER_QUIT.register {
                 stop()
@@ -66,7 +73,7 @@ data class DebugProxyClient(val input: InputStream, val output: OutputStream) {
         private fun start() {
             thread = thread?.also {
                 HexDebug.LOGGER.warn("Tried to start DebugAdapterProxyClient while already running")
-            } ?: thread(name="DebugAdapterProxyClient_$port") {
+            } ?: thread(name="DebugAdapterProxyClient") {
                 runBlocking {
                     wrapperJob = launch { runServerWrapper() }
                 }
@@ -100,10 +107,23 @@ data class DebugProxyClient(val input: InputStream, val output: OutputStream) {
                 awaitCancellation()
             }
             HexDebug.LOGGER.info("Listening for debug client on port {}...", port)
-            aSocket(selector).tcp().bind(port = port).use { serverSocket ->
-                while (true) {
-                    acceptClient(serverSocket)
-                }
+            try {
+                aSocket(selector)
+                    .tcp()
+                    .bind(
+                        port = port,
+                        configure = {
+                            reuseAddress = true
+                        },
+                    )
+                    .use { serverSocket ->
+                        while (true) {
+                            acceptClient(serverSocket)
+                        }
+                    }
+            } catch (e: BindException) {
+                HexDebug.LOGGER.error("Failed to open local proxy server!", e)
+                awaitCancellation()
             }
         }
 

@@ -7,7 +7,8 @@ import at.petrak.hexcasting.common.network.MsgNewSpellPatternAck
 import dev.architectury.networking.NetworkManager.PacketContext
 import gay.`object`.hexdebug.adapter.proxy.DebugProxyClient
 import gay.`object`.hexdebug.config.DebuggerDisplayMode
-import gay.`object`.hexdebug.config.HexDebugConfig
+import gay.`object`.hexdebug.config.HexDebugClientConfig
+import gay.`object`.hexdebug.config.HexDebugServerConfig
 import gay.`object`.hexdebug.gui.splicing.SplicingTableMenu
 import gay.`object`.hexdebug.gui.splicing.SplicingTableScreen
 import gay.`object`.hexdebug.gui.splicing.mixin
@@ -15,8 +16,8 @@ import gay.`object`.hexdebug.items.DebuggerItem
 import gay.`object`.hexdebug.items.DebuggerItem.DebugState
 import gay.`object`.hexdebug.items.EvaluatorItem
 import gay.`object`.hexdebug.items.EvaluatorItem.EvalState
+import gay.`object`.hexdebug.items.base.getThreadId
 import gay.`object`.hexdebug.networking.msg.*
-import gay.`object`.hexdebug.registry.HexDebugItems
 import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.Component
 
@@ -27,21 +28,23 @@ fun HexDebugMessageS2C.applyOnClient(ctx: PacketContext) = ctx.queue {
         }
 
         is MsgDebuggerStateS2C -> {
-            DebuggerItem.debugState = debuggerState
-            if (debuggerState == DebugState.NOT_DEBUGGING) {
-                EvaluatorItem.evalState = EvalState.DEFAULT
+            for ((threadId, debugState) in debugStates) {
+                DebuggerItem.debugStates[threadId] = debugState
+                if (debugState == DebugState.NOT_DEBUGGING) {
+                    EvaluatorItem.evalStates[threadId] = EvalState.DEFAULT
+                }
             }
         }
 
         is MsgEvaluatorStateS2C -> {
-            EvaluatorItem.evalState = evalState
+            EvaluatorItem.evalStates[threadId] = evalState
         }
 
         is MsgEvaluatorClientInfoS2C -> {
             (Minecraft.getInstance().screen as? GuiSpellcasting)?.let { screen ->
-                // only apply the message if the screen was opened with an evaluator
+                // only apply the message if the screen was opened with an evaluator configured for this thread
                 val heldItem = ctx.player.getItemInHand(screen.mixin.handOpenedWith)
-                if (heldItem.`is`(HexDebugItems.EVALUATOR.value)) {
+                if (heldItem.item is EvaluatorItem && getThreadId(heldItem) == threadId) {
                     // just delegate to the existing handler instead of copying the functionality here
                     // we use an index of -1 because we don't want to update the resolution type of any patterns
                     MsgNewSpellPatternAck.handle(MsgNewSpellPatternAck(info, -1))
@@ -50,7 +53,7 @@ fun HexDebugMessageS2C.applyOnClient(ctx: PacketContext) = ctx.queue {
         }
 
         is MsgPrintDebuggerStatusS2C -> {
-            val config = HexDebugConfig.client
+            val config = HexDebugClientConfig.config
             val shouldPrint = when (config.debuggerDisplayMode) {
                 DebuggerDisplayMode.DISABLED -> false
                 DebuggerDisplayMode.NOT_CONNECTED -> !isConnected
@@ -60,7 +63,7 @@ fun HexDebugMessageS2C.applyOnClient(ctx: PacketContext) = ctx.queue {
             if (shouldPrint) {
                 ctx.player.displayClientMessage(
                     Component.translatable(
-                        "text.hexdebug.debugger_stopped",
+                        "text.hexdebug.debugging.debugger_stopped",
                         if (config.showDebugClientLineNumber) line else index,
                         iota,
                     ),
@@ -71,13 +74,9 @@ fun HexDebugMessageS2C.applyOnClient(ctx: PacketContext) = ctx.queue {
 
         is MsgSplicingTableNewDataS2C -> {
             SplicingTableMenu.getInstance(ctx.player)?.also { menu ->
-                menu.clientView = data
+                menu.receiveData(this)
                 SplicingTableScreen.getInstance()?.reloadData()
             }
-        }
-
-        is MsgSplicingTableNewSelectionS2C -> {
-            SplicingTableScreen.getInstance()?.selection = selection
         }
 
         is MsgSplicingTableNewStaffPatternS2C -> {
@@ -89,7 +88,7 @@ fun HexDebugMessageS2C.applyOnClient(ctx: PacketContext) = ctx.queue {
         }
 
         is MsgSyncConfigS2C -> {
-            HexDebugConfig.onSyncConfig(serverConfig)
+            HexDebugServerConfig.onSyncConfig(serverConfig)
         }
     }
 }

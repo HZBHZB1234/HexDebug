@@ -2,14 +2,10 @@ package hexdebug.conventions
 
 import hexdebug.hexdebugProperties
 import hexdebug.libs
-import kotlin.io.path.div
 
 plugins {
-    id("hexdebug.conventions.kotlin")
+    id("hexdebug.conventions.architectury-base")
     id("hexdebug.utils.OTJFPOPKPCPBP")
-
-    `maven-publish`
-    id("dev.architectury.loom")
 }
 
 val platform: String by project
@@ -17,7 +13,6 @@ val platform: String by project
 base.archivesName = "${hexdebugProperties.modId}-$platform"
 
 loom {
-    silentMojangMappingsLicense()
     accessWidenerPath = project(":Common").file("src/main/resources/hexdebug.accesswidener")
 
     mixin {
@@ -29,14 +24,10 @@ loom {
 }
 
 dependencies {
-    minecraft(libs.minecraft)
-
     mappings(loom.layered {
         officialMojangMappings()
         parchment(libs.parchment)
     })
-
-    annotationProcessor(libs.bundles.asm)
 }
 
 sourceSets {
@@ -50,25 +41,7 @@ sourceSets {
     }
 }
 
-tasks {
-    val jenkinsArtifacts = register<Copy>("jenkinsArtifacts") {
-        from(remapJar, remapSourcesJar, get("javadocJar"))
-        into(rootDir.toPath() / "build" / "jenkinsArtifacts")
-    }
-
-    build {
-        dependsOn(jenkinsArtifacts)
-    }
-}
-
 publishing {
-    repositories {
-        hexdebugProperties.localMavenUrl?.let {
-            maven {
-                url = it
-            }
-        }
-    }
     publications {
         create<MavenPublication>("maven") {
             artifactId = base.archivesName.get()

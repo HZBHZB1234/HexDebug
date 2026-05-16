@@ -1,5 +1,7 @@
 package gay.`object`.hexdebug.items
 
+import at.petrak.hexcasting.api.casting.ParticleSpray
+import at.petrak.hexcasting.api.utils.asTranslatedComponent
 import at.petrak.hexcasting.common.items.ItemStaff
 import at.petrak.hexcasting.common.lib.HexSounds
 import at.petrak.hexcasting.common.network.MsgNewSpellPatternAck
@@ -8,9 +10,8 @@ import at.petrak.hexcasting.common.network.MsgOpenSpellGuiAck
 import at.petrak.hexcasting.xplat.IXplatAbstractions
 import gay.`object`.hexdebug.HexDebug
 import gay.`object`.hexdebug.adapter.DebugAdapterManager
-import gay.`object`.hexdebug.casting.eval.newEvaluatorCastEnv
-import gay.`object`.hexdebug.items.base.ItemPredicateProvider
-import gay.`object`.hexdebug.items.base.ModelPredicateEntry
+import gay.`object`.hexdebug.debugger.DebuggerState
+import gay.`object`.hexdebug.items.base.*
 import gay.`object`.hexdebug.utils.asItemPredicate
 import net.minecraft.client.player.LocalPlayer
 import net.minecraft.network.chat.Component
@@ -20,15 +21,20 @@ import net.minecraft.world.InteractionHand
 import net.minecraft.world.InteractionResultHolder
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.item.ItemStack
+import net.minecraft.world.item.TooltipFlag
 import net.minecraft.world.level.Level
 
-class EvaluatorItem(properties: Properties) : ItemStaff(properties), ItemPredicateProvider {
+class EvaluatorItem(
+    properties: Properties,
+    val isQuenched: Boolean,
+) : ItemStaff(properties), ItemPredicateProvider, ShiftScrollable {
     override fun use(world: Level, player: Player, hand: InteractionHand): InteractionResultHolder<ItemStack> {
         val itemStack = player.getItemInHand(hand)
+        val threadId = getThreadId(itemStack)
 
         if (world.isClientSide) {
-            if (player.isShiftKeyDown && evalState == EvalState.MODIFIED) {
-                player.playSound(HexSounds.FAIL_PATTERN, 1f, 1f)
+            if (player.isShiftKeyDown && evalStates[threadId] == EvalState.MODIFIED) {
+                player.playSound(HexSounds.STAFF_RESET, 1f, 1f)
             }
             return InteractionResultHolder.success(itemStack)
         }
@@ -36,21 +42,35 @@ class EvaluatorItem(properties: Properties) : ItemStaff(properties), ItemPredica
         player as ServerPlayer
 
         val debugAdapter = DebugAdapterManager[player]
-        val debugger = debugAdapter?.debugger
+        val debugger = debugAdapter?.debugger(threadId)
         if (debugAdapter == null || debugger == null) {
-            player.displayClientMessage(Component.translatable("text.hexdebug.no_session"), true)
+            player.displayClientMessage("text.hexdebug.debugging.no_session".asTranslatedComponent(threadId), true)
+            return InteractionResultHolder.fail(itemStack)
+        }
+
+        if (!debugger.debugEnv.isCasterInRange) {
+            return InteractionResultHolder.fail(itemStack)
+        }
+
+        if (debugger.state != DebuggerState.PAUSED) {
+            player.displayClientMessage("text.hexdebug.debugging.not_paused".asTranslatedComponent(threadId), true)
             return InteractionResultHolder.fail(itemStack)
         }
 
         if (player.isShiftKeyDown) {
-            debugAdapter.resetEvaluator()
+            debugAdapter.resetEvaluator(threadId)
+            MsgClearSpiralPatternsS2C(player.uuid).also {
+                IXplatAbstractions.INSTANCE.sendPacketToPlayer(player, it)
+                IXplatAbstractions.INSTANCE.sendPacketTracking(player, it)
+            }
         }
 
         val patterns = debugger.evaluatorUIPatterns
-        val view = debugger.getClientView()
-        IXplatAbstractions.INSTANCE.sendPacketToPlayer(
-            player, MsgOpenSpellGuiAck(hand, patterns, view.stack, view.parenthesized, view.ravenmind, view.parenCount)
-        )
+        debugger.generateDescs()?.let { (stack, ravenmind) ->
+            IXplatAbstractions.INSTANCE.sendPacketToPlayer(
+                player, MsgOpenSpellGuiS2C(hand, patterns, stack, ravenmind, 0)
+            )
+        }
 
         player.awardStat(Stats.ITEM_USED[this])
 
@@ -58,32 +78,55 @@ class EvaluatorItem(properties: Properties) : ItemStaff(properties), ItemPredica
     }
 
     override fun getModelPredicates() = listOf(
-        ModelPredicateEntry(EVAL_STATE_PREDICATE) { _, _, entity, _ ->
+        ModelPredicateEntry(EVAL_STATE_PREDICATE) { stack, _, entity, _ ->
             // don't show the active icon for items held by other players, on the ground, etc
-            val state = if (entity is LocalPlayer) evalState else EvalState.DEFAULT
-            state.asItemPredicate(EvalState.values())
+            val state = if (entity is LocalPlayer) getEvalState(stack) else EvalState.DEFAULT
+            state.asItemPredicate
         }
     )
+
+    override fun appendHoverText(
+        stack: ItemStack,
+        level: Level?,
+        tooltipComponents: MutableList<Component>,
+        isAdvanced: TooltipFlag,
+    ) {
+        if (isQuenched) {
+            tooltipComponents.add(displayThread(null, getThreadId(stack)))
+        }
+        super.appendHoverText(stack, level, tooltipComponents, isAdvanced)
+    }
+
+    // only allow shift+ctrl scrolling, and only if it's quenched
+    override fun canShiftScroll(isCtrl: Boolean) = isCtrl && isQuenched
+
+    override fun handleShiftScroll(sender: ServerPlayer, stack: ItemStack, delta: Double, isCtrl: Boolean) {
+        val component = rotateThreadId(sender, stack, delta < 0)
+        sender.displayClientMessage(component, true)
+    }
 
     companion object {
         val EVAL_STATE_PREDICATE = HexDebug.id("eval_state")
 
-        var evalState: EvalState = EvalState.DEFAULT
+        var evalStates = mutableMapOf<Int, EvalState>()
+
+        private fun getEvalState(stack: ItemStack) = evalStates[getThreadId(stack)] ?: EvalState.DEFAULT
 
         /**
          * Copy of [MsgNewSpellPatternSyn.handle][at.petrak.hexcasting.common.network.MsgNewSpellPatternSyn.handle]
          * for evaluating patterns in the active debugger, if any.
          */
         @JvmStatic
-        fun handleNewPatternOnServer(sender: ServerPlayer, msg: MsgNewSpellPatternSyn) {
+        fun handleNewPatternOnServer(sender: ServerPlayer, msg: MsgNewSpellPatternC2S) {
+            val threadId = getThreadId(sender.getItemInHand(msg.handUsed))
+
             val debugAdapter = DebugAdapterManager[sender]
-            val debugger = debugAdapter?.debugger
+            val debugger = debugAdapter?.debugger(threadId)
             if (debugAdapter == null || debugger == null) {
                 return
             }
 
-            val env = newEvaluatorCastEnv(sender, msg.handUsed)
-            val clientInfo = debugAdapter.evaluate(env, msg.pattern) ?: return
+            val clientInfo = debugAdapter.evaluate(threadId, msg.pattern) ?: return
 
             debugger.evaluatorUIPatterns.clear()
             if (!clientInfo.isStackClear) {

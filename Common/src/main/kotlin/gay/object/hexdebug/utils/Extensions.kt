@@ -1,26 +1,39 @@
 package gay.`object`.hexdebug.utils
 
-import at.petrak.hexcasting.api.PatternRegistry
-import at.petrak.hexcasting.api.spell.casting.SpecialPatterns
-import at.petrak.hexcasting.api.spell.iota.GarbageIota
-import at.petrak.hexcasting.api.spell.iota.Iota
-import at.petrak.hexcasting.api.spell.iota.ListIota
-import at.petrak.hexcasting.api.spell.iota.PatternIota
-import at.petrak.hexcasting.api.spell.math.HexPattern
-import at.petrak.hexcasting.api.spell.mishaps.MishapInvalidPattern
+import at.petrak.hexcasting.api.HexAPI
+import at.petrak.hexcasting.api.casting.PatternShapeMatch
+import at.petrak.hexcasting.api.casting.eval.CastingEnvironment
+import at.petrak.hexcasting.api.casting.eval.SpecialPatterns
+import at.petrak.hexcasting.api.casting.iota.*
+import at.petrak.hexcasting.api.casting.math.HexPattern
+import at.petrak.hexcasting.api.casting.mishaps.MishapInvalidIota
+import at.petrak.hexcasting.api.casting.mishaps.MishapNotEnoughArgs
 import at.petrak.hexcasting.api.utils.*
 import at.petrak.hexcasting.xplat.IXplatAbstractions
+import gay.`object`.hexdebug.api.splicing.SplicingTableIotaClientView
+import net.minecraft.commands.arguments.NbtPathArgument.NbtPath
+import net.minecraft.core.Registry
+import net.minecraft.nbt.NumericTag
+import net.minecraft.nbt.StringTag
+import net.minecraft.nbt.Tag
 import net.minecraft.network.chat.*
-import net.minecraft.server.level.ServerLevel
+import net.minecraft.resources.ResourceLocation
+import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.Container
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemStack
+import net.minecraft.world.level.block.entity.BlockEntity
+import net.minecraft.world.level.block.state.properties.Property
 import java.awt.Color
 import java.util.*
 import java.util.concurrent.CompletableFuture
+import kotlin.enums.enumEntries
+import kotlin.math.abs
 import kotlin.math.ceil
+import kotlin.math.max
+import kotlin.math.roundToInt
 
 // futures
 
@@ -124,14 +137,15 @@ fun Iota.displayWithPatternName(world: ServerLevel): Component = when (this) {
     else -> display()
 }
 
-fun Iota.toHexpatternSource(world: ServerLevel, wrapEmbedded: Boolean = true): String {
+@JvmOverloads
+fun Iota.toHexpatternSource(env: CastingEnvironment, wrapEmbedded: Boolean = true): String {
     val iotaText = when (this) {
         is PatternIota -> {
             // don't wrap known patterns in angled brackets
-            when (pattern) {
-                SpecialPatterns.INTROSPECTION -> "{"
-                SpecialPatterns.RETROSPECTION -> "}"
-                else -> pattern.getI18nOrNull(world)?.string
+            when (pattern.angles) {
+                SpecialPatterns.INTROSPECTION.angles -> "{"
+                SpecialPatterns.RETROSPECTION.angles -> "}"
+                else -> pattern.getI18nOrNull(env)?.string
             }?.let { return it }
             // but do wrap unknown ones
             pattern.simpleString()
@@ -152,15 +166,28 @@ fun Iota.toHexpatternSource(world: ServerLevel, wrapEmbedded: Boolean = true): S
     return iotaText
 }
 
-fun HexPattern.getI18nOrNull(world: ServerLevel): Component? {
-    return try {
-        PatternRegistry.matchPattern(this, world).displayName
-    } catch (e: MishapInvalidPattern) {
-        val path = when (this) {
-            SpecialPatterns.INTROSPECTION -> "open_paren"
-            SpecialPatterns.RETROSPECTION -> "close_paren"
-            SpecialPatterns.CONSIDERATION -> "escape"
-            else -> return null
+fun List<SplicingTableIotaClientView>.toHexpatternSource(): String {
+    return joinToString("\n") {
+        val indent = " ".repeat(max(0, 4 * it.depth))
+        indent + it.hexpatternSource
+    }
+}
+
+fun HexPattern.getI18nOrNull(env: CastingEnvironment): Component? {
+    val hexAPI = HexAPI.instance()
+    return when (val lookup = PatternRegistryManifest.matchPattern(this, env, false)) {
+        is PatternShapeMatch.Normal -> hexAPI.getActionI18n(lookup.key, false)
+        is PatternShapeMatch.PerWorld -> hexAPI.getActionI18n(lookup.key, true)
+        is PatternShapeMatch.Special -> lookup.handler.name
+        is PatternShapeMatch.Nothing -> {
+            val path = when (this.angles) {
+                SpecialPatterns.INTROSPECTION.angles -> "open_paren"
+                SpecialPatterns.RETROSPECTION.angles -> "close_paren"
+                SpecialPatterns.CONSIDERATION.angles -> "escape"
+                SpecialPatterns.EVANITION.angles -> "undo"
+                else -> return null
+            }
+            hexAPI.getRawHookI18n(HexAPI.modLoc(path))
         }
         "hexcasting.spell.hexcasting:$path".asTranslatedComponent.lightPurple
     }
@@ -175,7 +202,73 @@ fun HexPattern.simpleString() = buildString {
     }
 }
 
+fun HexPattern?.sigsEqual(other: HexPattern?): Boolean =
+    this?.angles == other?.angles
+
 val Color.fred get() = red.toFloat() / 255f
 val Color.fgreen get() = green.toFloat() / 255f
 val Color.fblue get() = blue.toFloat() / 255f
 val Color.falpha get() = alpha.toFloat() / 255f
+
+// action helpers
+
+val ServerPlayer.isEnlightened get(): Boolean {
+    return serverLevel().server.advancements
+        .getAdvancement(HexAPI.modLoc("enlightenment"))
+        ?.let { advancements.getOrStartProgress(it).isDone }
+        ?: false
+}
+
+fun List<Iota>.getPositiveIntOrNull(idx: Int, argc: Int = 0): Int? {
+    val x = this.getOrElse(idx) { throw MishapNotEnoughArgs(idx + 1, this.size) }
+    when (x) {
+        is DoubleIota -> {
+            val double = x.double
+            val rounded = double.roundToInt()
+            if (abs(double - rounded) <= DoubleIota.TOLERANCE && rounded >= 0) {
+                return rounded
+            }
+        }
+        is NullIota -> return null
+    }
+    throw MishapInvalidIota.of(x, if (argc == 0) idx else argc - (idx + 1), "int.positive_or_null")
+}
+
+// block entities
+
+fun <T : Comparable<T>, V : T> BlockEntity.setPropertyIfChanged(property: Property<T>, value: V) {
+    if (blockState.getValue(property) != value) {
+        level?.setBlockAndUpdate(blockPos, blockState.setValue(property, value))
+    }
+}
+
+// registries
+
+fun <T> Registry<T>.getOrNull(name: ResourceLocation): T? {
+    if (containsKey(name)) {
+        return get(name)
+    }
+    return null
+}
+
+// nbt paths
+
+fun NbtPath.getOrNull(tag: Tag): List<Tag>? {
+    return try {
+        get(tag)
+    } catch (e: Exception) {
+        null
+    }
+}
+
+fun NbtPath.getIntOrNull(tag: Tag): Int? {
+    return (getOrNull(tag)?.first() as? NumericTag)?.asInt
+}
+
+fun NbtPath.getStringOrNull(tag: Tag): String? {
+    return (getOrNull(tag)?.first() as? StringTag)?.asString
+}
+
+fun NbtPath.getResourceLocationOrNull(tag: Tag): ResourceLocation? {
+    return getStringOrNull(tag)?.let(ResourceLocation::tryParse)
+}

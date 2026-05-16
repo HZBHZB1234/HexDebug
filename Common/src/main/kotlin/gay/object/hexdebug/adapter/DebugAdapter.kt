@@ -1,18 +1,20 @@
 package gay.`object`.hexdebug.adapter
 
-import at.petrak.hexcasting.api.spell.SpellList
-import at.petrak.hexcasting.api.spell.casting.CastingContext
-import at.petrak.hexcasting.api.spell.casting.ControllerInfo
-import at.petrak.hexcasting.api.spell.casting.ResolvedPatternType
-import at.petrak.hexcasting.api.spell.iota.Iota
-import at.petrak.hexcasting.api.spell.iota.PatternIota
-import at.petrak.hexcasting.api.spell.math.HexPattern
-import at.petrak.hexcasting.common.network.MsgNewSpellPatternAck
-import at.petrak.hexcasting.xplat.IXplatAbstractions
+import at.petrak.hexcasting.api.casting.SpellList
+import at.petrak.hexcasting.api.casting.eval.CastingEnvironment
+import at.petrak.hexcasting.api.casting.eval.ExecutionClientView
+import at.petrak.hexcasting.api.casting.eval.ResolvedPatternType
+import at.petrak.hexcasting.api.casting.eval.vm.CastingImage
+import at.petrak.hexcasting.api.casting.iota.Iota
+import at.petrak.hexcasting.api.casting.iota.PatternIota
+import at.petrak.hexcasting.api.casting.math.HexPattern
 import gay.`object`.hexdebug.HexDebug
-import gay.`object`.hexdebug.adapter.DebugAdapterState.Debugging
-import gay.`object`.hexdebug.adapter.DebugAdapterState.NotDebugging
 import gay.`object`.hexdebug.adapter.proxy.DebugProxyServerLauncher
+import gay.`object`.hexdebug.config.HexDebugServerConfig
+import gay.`object`.hexdebug.core.api.debugging.StopReason
+import gay.`object`.hexdebug.core.api.debugging.env.DebugEnvironment
+import gay.`object`.hexdebug.core.api.exceptions.IllegalDebugSessionException
+import gay.`object`.hexdebug.core.api.exceptions.IllegalDebugThreadException
 import gay.`object`.hexdebug.debugger.*
 import gay.`object`.hexdebug.items.DebuggerItem
 import gay.`object`.hexdebug.items.EvaluatorItem
@@ -37,97 +39,182 @@ import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
 
-open class DebugAdapter(val player: ServerPlayer) : IDebugProtocolServer {
-    private var state: DebugAdapterState = NotDebugging()
-        set(value) {
-            field = value
-            setDebuggerState(value)
-        }
+class DebugAdapter(val player: ServerPlayer) : IDebugProtocolServer {
+    private var isConnected = false
+    private var lastDebugger: HexDebugger? = null // for resolving sources after exit
+    private val debuggers = mutableMapOf<Int, HexDebugger>()
+    private val threadIds = mutableMapOf<UUID, Int>()
+    private val state = SharedDebugState()
 
-    val isDebugging get() = state is Debugging
-
-    val debugger get() = (state as? Debugging)?.debugger
-
-    open val launcher: IHexDebugLauncher by lazy {
+    val launcher: IHexDebugLauncher by lazy {
         DebugProxyServerLauncher.createLauncher(this, ::messageWrapper, ::exceptionHandler)
     }
 
     private val remoteProxy: IDebugProtocolClient get() = launcher.remoteProxy
 
-    private fun setDebuggerState(state: DebugAdapterState) = setDebuggerState(
-        when (state) {
-            is Debugging -> DebuggerItem.DebugState.DEBUGGING
-            else -> DebuggerItem.DebugState.NOT_DEBUGGING
-        }
-    )
+    private val maxThreads get() = HexDebugServerConfig.config.maxDebugThreads(player)
 
-    protected open fun setDebuggerState(debuggerState: DebuggerItem.DebugState) {
-        MsgDebuggerStateS2C(debuggerState).sendToPlayer(player)
+    fun isDebugging(threadId: Int) = debugger(threadId) != null
 
-        // close the evaluator grid if we stopped debugging
-        if (debuggerState == DebuggerItem.DebugState.NOT_DEBUGGING) {
-            val info = ControllerInfo(true, ResolvedPatternType.EVALUATED, listOf(), listOf(), null, 0)
-            MsgEvaluatorClientInfoS2C(info).sendToPlayer(player)
-        }
+    fun debugger(sessionId: UUID) =
+        threadIds[sessionId]
+            ?.let(debuggers::get)
+            ?.takeIf { it.sessionId == sessionId }
+
+    fun debugger(threadId: Int) = debuggers[threadId]
+
+    private fun inRangeDebugger(threadId: Int) =
+        debugger(threadId)?.takeIf { it.debugEnv.isCasterInRange }
+
+    private fun packId(threadId: Int, reference: Int): Int =
+        (threadId shl THREAD_ID_SHIFT) or (reference and REFERENCE_MASK)
+
+    private fun unpackId(id: Int): Pair<Int, Int> =
+        Pair(
+            id ushr THREAD_ID_SHIFT, // threadId
+            id and REFERENCE_MASK, // reference
+        )
+
+    private fun closeEvaluator(threadId: Int?) {
+        val info = ExecutionClientView(true, ResolvedPatternType.EVALUATED, listOf(), null)
+        MsgEvaluatorClientInfoS2C(threadId, info).sendToPlayer(player)
     }
 
-    protected open fun setEvaluatorState(evalState: EvaluatorItem.EvalState) {
-        MsgEvaluatorStateS2C(evalState).sendToPlayer(player)
+    private fun setEvaluatorState(threadId: Int, evalState: EvaluatorItem.EvalState) {
+        MsgEvaluatorStateS2C(threadId, evalState).sendToPlayer(player)
     }
 
-    protected open fun printDebuggerStatus(iota: String, index: Int) {
+    private fun printDebuggerStatus(iota: String, index: Int) {
         MsgPrintDebuggerStatusS2C(
             iota = iota,
             index = index,
             line = state.initArgs.indexToLine(index),
-            isConnected = state.isConnected,
+            isConnected = isConnected,
         ).sendToPlayer(player)
     }
 
-    fun startDebugging(args: CastArgs): Boolean {
-        if (state is Debugging) return false
-        val state = Debugging(state, args).also { state = it }
-        handleDebuggerStep(state.debugger.start())
-        return true
+    fun createDebugThread(debugEnv: DebugEnvironment, maybeThreadId: Int?) {
+        if (debugEnv.sessionId in threadIds) {
+            throw IllegalDebugSessionException("Debug session already in use")
+        }
+
+        val threadId = resolveThreadId(maybeThreadId)
+        threadIds[debugEnv.sessionId] = threadId
+
+        val debugger = HexDebugger(state, debugEnv, threadId)
+        debuggers[threadId] = debugger
+
+        remoteProxy.thread(ThreadEventArguments().also {
+            it.reason = ThreadEventArgumentsReason.STARTED
+            it.threadId = threadId
+        })
+
+        MsgDebuggerStateS2C(threadId, DebuggerItem.DebugState.DEBUGGING).sendToPlayer(player)
+        closeEvaluator(threadId)
     }
 
-    fun disconnectClient() {
-        if (state.isConnected) {
+    fun getFreeThreadId(): Int? = (0 until maxThreads).firstOrNull { !isDebugging(it) }
+
+    private fun resolveThreadId(threadId: Int?): Int {
+        if (threadId == null) {
+            return getFreeThreadId()
+                ?: throw IllegalDebugThreadException("All debug threads are already in use")
+        }
+
+        if (threadId !in (0 until maxThreads)) {
+            throw IllegalDebugThreadException("Debug thread ID out of range: $threadId")
+        }
+
+        if (isDebugging(threadId)) {
+            throw IllegalDebugThreadException("Debug thread already in use: $threadId")
+        }
+
+        return threadId
+    }
+
+    fun startExecuting(
+        debugEnv: DebugEnvironment,
+        env: CastingEnvironment,
+        iotas: List<Iota>,
+        image: CastingImage?,
+    ) {
+        val debugger = debugger(debugEnv.sessionId)
+            ?: throw IllegalDebugSessionException("Debug session not found")
+
+        val result = debugger.startExecuting(env, iotas, image)
+            ?: throw IllegalDebugSessionException("Debug session is already executing something")
+
+        lastDebugger = debugger
+        handleDebuggerStep(debugger.threadId, result, wasPaused = false)
+    }
+
+    fun onRemove() {
+        if (isConnected) {
             remoteProxy.terminated(TerminatedEventArguments())
-            state.isConnected = false
+            isConnected = false
+        }
+        forceTerminateAll()
+    }
+
+    fun onDeath() {
+        forceTerminateAll()
+    }
+
+    private fun forceTerminateAll() {
+        val debugEnvs = debuggers.values.map { it.debugEnv }
+        debuggers.clear()
+        threadIds.clear()
+        for (debugEnv in debugEnvs) {
+            debugEnv.terminate()
         }
     }
 
     fun print(
+        sessionId: UUID,
         value: String,
         category: String = OutputEventArgumentsCategory.STDOUT,
         withSource: Boolean = true,
     ) {
+        val debugger = debugger(sessionId) ?: return
         remoteProxy.output(OutputEventArguments().also {
             it.category = category
             it.output = value
             if (withSource) {
-                it.setSourceAndPosition(state.initArgs, debugger?.lastEvaluatedMetadata)
+                it.setSourceAndPosition(state.initArgs, debugger.lastEvaluatedMetadata)
             }
         })
     }
 
-    fun evaluate(env: CastingContext, pattern: HexPattern) = evaluate(env, PatternIota(pattern))
+    fun evaluate(threadId: Int, pattern: HexPattern) =
+        evaluate(threadId, PatternIota(pattern))
 
-    fun evaluate(env: CastingContext, iota: Iota) = evaluate(env, SpellList.LList(listOf(iota)))
+    fun evaluate(threadId: Int, iota: Iota) =
+        evaluate(threadId, SpellList.LList(listOf(iota)))
 
-    fun evaluate(env: CastingContext, list: SpellList) = debugger?.let {
-        val result = it.evaluate(env, list)
-        if (result.startedEvaluating) {
-            setEvaluatorState(EvaluatorItem.EvalState.MODIFIED)
+    fun evaluate(threadId: Int, list: SpellList) =
+        inRangeDebugger(threadId)?.let {
+            val result = it.evaluate(list) ?: return null
+            if (result.startedEvaluating) {
+                setEvaluatorState(threadId, EvaluatorItem.EvalState.MODIFIED)
+            }
+            handleDebuggerStep(threadId, result)
         }
-        handleDebuggerStep(result)
+
+    fun resetEvaluator(threadId: Int) {
+        setEvaluatorState(threadId, EvaluatorItem.EvalState.DEFAULT)
+        if (inRangeDebugger(threadId)?.resetEvaluator() == true) {
+            sendStoppedEvent(threadId, StopReason.STEP)
+        }
     }
 
-    fun resetEvaluator() {
-        setEvaluatorState(EvaluatorItem.EvalState.DEFAULT)
-        if (debugger?.resetEvaluator() == true) {
-            sendStoppedEvent(StopReason.STEP)
+    fun restartThread(threadId: Int) {
+        remoteProxy.thread(ThreadEventArguments().also {
+            it.reason = ThreadEventArgumentsReason.EXITED
+            it.threadId = threadId
+        })
+        debuggers.remove(threadId)?.let {
+            threadIds.remove(it.sessionId)
+            it.debugEnv.restart(threadId)
         }
     }
 
@@ -145,14 +232,19 @@ open class DebugAdapter(val player: ServerPlayer) : IDebugProtocolServer {
             ?: ResponseError(ResponseErrorCode.InternalError, e.toString(), e.stackTraceToString())
     }
 
-    private fun handleDebuggerStep(result: DebugStepResult): ControllerInfo? {
+    private fun handleDebuggerStep(
+        threadId: Int,
+        result: DebugStepResult,
+        wasPaused: Boolean = true,
+        sendContinuedEvent: Boolean = true,
+    ): ExecutionClientView? {
         val view = result.clientInfo?.also {
-            MsgEvaluatorClientInfoS2C(it).sendToPlayer(player)
+            MsgEvaluatorClientInfoS2C(threadId, it).sendToPlayer(player)
         }
 
         // TODO: set nonzero exit code if we hit a mishap
         if (result.isDone) {
-            terminate(null)
+            terminateThreads(listOf(threadId))
             return view
         }
 
@@ -163,20 +255,45 @@ open class DebugAdapter(val player: ServerPlayer) : IDebugProtocolServer {
             })
         }
 
-        sendStoppedEvent(result.reason)
+        if (result.reason != null) {
+            // stopped
+            sendStoppedEvent(threadId, result.reason)
 
-        debugger?.getNextIotaToEvaluate()?.also { (iota, index) ->
-            printDebuggerStatus(iota, index)
+            debugger(threadId)?.getNextIotaToEvaluate()?.also { (iota, index) ->
+                printDebuggerStatus(iota, index)
+            }
+        } else if (wasPaused) {
+            // running
+            if (sendContinuedEvent) {
+                remoteProxy.continued(ContinuedEventArguments().also {
+                    it.threadId = threadId
+                    it.allThreadsContinued = false
+                })
+            }
+
+            closeEvaluator(threadId)
         }
 
         return view
     }
 
-    private fun sendStoppedEvent(reason: StopReason) {
-        remoteProxy.stopped(StoppedEventArguments().also {
-            it.threadId = 0
-            it.reason = reason.value
-        })
+    private fun sendStoppedEvent(threadId: Int?, reason: StopReason) {
+        if (threadId == null) {
+            debuggers.keys.forEach { sendStoppedEvent(it, reason) }
+        } else {
+            val reasonStr = when (reason) {
+                StopReason.STEP -> StoppedEventArgumentsReason.STEP
+                StopReason.PAUSE -> StoppedEventArgumentsReason.PAUSE
+                StopReason.BREAKPOINT -> StoppedEventArgumentsReason.BREAKPOINT
+                StopReason.EXCEPTION -> StoppedEventArgumentsReason.EXCEPTION
+                StopReason.STARTED -> StoppedEventArgumentsReason.ENTRY
+                StopReason.TERMINATED -> return
+            }
+            remoteProxy.stopped(StoppedEventArguments().also {
+                it.threadId = threadId
+                it.reason = reasonStr
+            })
+        }
     }
 
     private fun invalidateBreakpoints(n: Int) = Array(n) {
@@ -184,6 +301,15 @@ open class DebugAdapter(val player: ServerPlayer) : IDebugProtocolServer {
             isVerified = false
             message = "Invalid"
             reason = BreakpointNotVerifiedReason.FAILED
+        }
+    }
+
+    private fun resumeAllExcept(threadId: Int, sendContinuedEvent: Boolean = true) {
+        for (index in allThreadIds) {
+            if (index == threadId) continue
+            inRangeDebugger(index)?.let {
+                handleDebuggerStep(threadId, it.executeUntilStopped(), sendContinuedEvent = sendContinuedEvent)
+            }
         }
     }
 
@@ -195,6 +321,8 @@ open class DebugAdapter(val player: ServerPlayer) : IDebugProtocolServer {
             supportsConfigurationDoneRequest = true
             supportsLoadedSourcesRequest = true
             supportsTerminateRequest = true
+            supportsTerminateThreadsRequest = true
+            supportsSingleThreadExecutionRequests = true
             supportsRestartRequest = true
             exceptionBreakpointFilters = ExceptionBreakpointType.values().map {
                 ExceptionBreakpointsFilter().apply {
@@ -215,12 +343,10 @@ open class DebugAdapter(val player: ServerPlayer) : IDebugProtocolServer {
     }
 
     override fun attach(args: MutableMap<String, Any>): CompletableFuture<Void> {
-        state.apply {
-            isConnected = true
-            launchArgs = LaunchArgs(args)
-        }
+        isConnected = true
+        state.launchArgs = LaunchArgs(args)
         remoteProxy.initialized()
-        player.displayClientMessage(Component.translatable("text.hexdebug.connected"), true)
+        player.displayClientMessage(Component.translatable("text.hexdebug.debugging.connected"), true)
         return futureOf()
     }
 
@@ -231,7 +357,7 @@ open class DebugAdapter(val player: ServerPlayer) : IDebugProtocolServer {
             // source prefixes generally invalidate when the server restarts
             // so remove all breakpoints if we haven't seen this player before
             breakpoints = if (player.uuid in knownPlayers) {
-                debugger?.setBreakpoints(args.source.sourceReference, args.breakpoints)?.toTypedArray() ?: arrayOf()
+                state.setBreakpoints(args.source.sourceReference, args.breakpoints).toTypedArray()
             } else {
                 invalidateBreakpoints(args.breakpoints.size)
             }
@@ -239,115 +365,256 @@ open class DebugAdapter(val player: ServerPlayer) : IDebugProtocolServer {
     }
 
     override fun setExceptionBreakpoints(args: SetExceptionBreakpointsArguments): CompletableFuture<SetExceptionBreakpointsResponse> {
+        state.exceptionBreakpoints.clear()
+        val responseBreakpoints = mutableListOf<Breakpoint>()
+
+        for (name in args.filters) {
+            val verified = try {
+                state.exceptionBreakpoints.add(ExceptionBreakpointType.valueOf(name))
+                true
+            } catch (_: IllegalArgumentException) {
+                false
+            }
+            responseBreakpoints.add(Breakpoint().apply { isVerified = verified })
+        }
+
         return SetExceptionBreakpointsResponse().apply {
-            breakpoints = debugger?.setExceptionBreakpoints(args.filters)?.toTypedArray() ?: arrayOf()
+            breakpoints = responseBreakpoints.toTypedArray()
         }.toFuture()
     }
 
     override fun configurationDone(args: ConfigurationDoneArguments?): CompletableFuture<Void> {
         knownPlayers.add(player.uuid)
-        if (isDebugging) sendStoppedEvent(StopReason.STEP)
+        if (debuggers.isNotEmpty()) sendStoppedEvent(null, StopReason.STEP)
         return futureOf()
     }
 
     // stepping
 
-    override fun next(args: NextArguments?): CompletableFuture<Void> {
-        debugger?.executeUntilStopped(RequestStepType.OVER)?.also(::handleDebuggerStep)
+    override fun next(args: NextArguments): CompletableFuture<Void> {
+        inRangeDebugger(args.threadId)?.let {
+            handleDebuggerStep(args.threadId, it.executeUntilStopped(RequestStepType.OVER))
+        }
+        // HACK: vscode doesn't support single-thread execution
+        // so just always default to single-thread unless explicitly requested otherwise
+        // this is the opposite of what the spec says, hopefully that doesn't break anything :3
+        // https://github.com/microsoft/vscode/issues/166450
+        if (args.singleThread == false) { // this can be null!
+            resumeAllExcept(args.threadId)
+        }
         return futureOf()
     }
 
-    override fun continue_(args: ContinueArguments?): CompletableFuture<ContinueResponse> {
-        debugger?.executeUntilStopped()?.also(::handleDebuggerStep)
+    override fun continue_(args: ContinueArguments): CompletableFuture<ContinueResponse> {
+        inRangeDebugger(args.threadId)?.let {
+            handleDebuggerStep(args.threadId, it.executeUntilStopped(), sendContinuedEvent = false)
+        }
+        val continueAllThreads = args.singleThread == false
+        if (continueAllThreads) {
+            resumeAllExcept(args.threadId, sendContinuedEvent = false)
+        }
+        return ContinueResponse().apply {
+            allThreadsContinued = continueAllThreads
+        }.toFuture()
+    }
+
+    override fun stepIn(args: StepInArguments): CompletableFuture<Void> {
+        inRangeDebugger(args.threadId)?.let {
+            handleDebuggerStep(args.threadId, it.executeUntilStopped(RequestStepType.IN))
+        }
+        if (args.singleThread == false) {
+            resumeAllExcept(args.threadId)
+        }
         return futureOf()
     }
 
-    override fun stepIn(args: StepInArguments?): CompletableFuture<Void> {
-        debugger?.executeOnce()?.also(::handleDebuggerStep)
-        return futureOf()
-    }
-
-    override fun stepOut(args: StepOutArguments?): CompletableFuture<Void> {
-        debugger?.executeUntilStopped(RequestStepType.OUT)?.also(::handleDebuggerStep)
+    override fun stepOut(args: StepOutArguments): CompletableFuture<Void> {
+        inRangeDebugger(args.threadId)?.let {
+            handleDebuggerStep(args.threadId, it.executeUntilStopped(RequestStepType.OUT))
+        }
+        if (args.singleThread == false) {
+            resumeAllExcept(args.threadId)
+        }
         return futureOf()
     }
 
     override fun pause(args: PauseArguments): CompletableFuture<Void> {
-        // TODO: wisps/circles?
+        inRangeDebugger(args.threadId)?.pause()
         return futureOf()
     }
 
     override fun restart(args: RestartArguments?): CompletableFuture<Void> {
-        state = NotDebugging(state)
-        state.restartArgs?.run(::startDebugging)
+        // hack
+        for (debugger in debuggers.values) {
+            if (!debugger.debugEnv.isCasterInRange) {
+                return futureOf()
+            }
+        }
+
+        val envs = debuggers.map { (threadId, debugger) -> threadId to debugger.debugEnv }
+
+        debuggers.clear()
+        threadIds.clear()
+
+        for ((threadId, debugEnv) in envs) {
+            debugEnv.restart(threadId)
+        }
+
+        MsgDebuggerStateS2C(
+            allThreadIds.associateWith {
+                DebuggerItem.DebugState.of(isDebugging(it))
+            }
+        ).sendToPlayer(player)
+
+        closeEvaluator(null)
+
         return futureOf()
+    }
+
+    fun removeThread(sessionId: UUID, terminate: Boolean) {
+        threadIds[sessionId]?.let {
+            removeThreadInner(it, terminate)
+            postRemoveThreads(listOf(it))
+        }
+    }
+
+    override fun terminateThreads(args: TerminateThreadsArguments): CompletableFuture<Void> {
+        val toRemove = args.threadIds.filter { inRangeDebugger(it) != null }
+        if (toRemove.isEmpty()) return futureOf()
+
+        terminateThreads(toRemove)
+
+        return futureOf()
+    }
+
+    private fun terminateThreads(toRemove: List<Int>) {
+        for (threadId in toRemove) {
+            removeThreadInner(threadId, terminate = true)
+        }
+        postRemoveThreads(toRemove)
+    }
+
+    private fun removeThreadInner(threadId: Int, terminate: Boolean) {
+        remoteProxy.thread(ThreadEventArguments().also {
+            it.reason = ThreadEventArgumentsReason.EXITED
+            it.threadId = threadId
+        })
+
+        debuggers.remove(threadId)?.let {
+            threadIds.remove(it.sessionId)
+            if (terminate) it.debugEnv.terminate()
+        }
+    }
+
+    private fun postRemoveThreads(threadIds: List<Int>) {
+        MsgDebuggerStateS2C(
+            threadIds.associateWith {
+                DebuggerItem.DebugState.NOT_DEBUGGING
+            }
+        ).sendToPlayer(player)
+
+        if (debuggers.isEmpty()) {
+            if (isConnected) {
+                remoteProxy.exited(ExitedEventArguments().also { it.exitCode = 0 })
+            } else {
+                lastDebugger = null
+                state.sourceAllocator.clear()
+            }
+            closeEvaluator(null)
+        } else {
+            for (threadId in threadIds) {
+                closeEvaluator(threadId)
+            }
+        }
     }
 
     override fun terminate(args: TerminateArguments?): CompletableFuture<Void> {
-        debugger?.let { debugger ->
-            for (source in debugger.getSources()) {
-                remoteProxy.loadedSource(LoadedSourceEventArguments().also {
-                    it.source = source
-                    it.reason = LoadedSourceEventArgumentsReason.REMOVED
-                })
-            }
-        }
-        remoteProxy.invalidated(InvalidatedEventArguments())
-        remoteProxy.exited(ExitedEventArguments().also { it.exitCode = 0 })
-        state = NotDebugging(state)
-        return futureOf()
+        return terminateThreads(TerminateThreadsArguments().also {
+            it.threadIds = debuggers.keys.toIntArray()
+        })
     }
 
     override fun disconnect(args: DisconnectArguments?): CompletableFuture<Void> {
-        state.isConnected = false
+        isConnected = false
+        state.onDisconnect()
+        // if there's an active debug session, we need to keep the sources in case the client reconnects
+        if (debuggers.isEmpty()) {
+            lastDebugger = null
+            state.sourceAllocator.clear()
+        }
         return futureOf()
     }
 
     // runtime data
 
     override fun threads(): CompletableFuture<ThreadsResponse> {
-        // always return the same dummy thread - we don't support multithreading
         return ThreadsResponse().apply {
-            threads = arrayOf(Thread().apply {
-                id = 0
-                name = "Main Thread"
-            })
+            threads = debuggers
+                .map { (threadId, debugger) ->
+                    Thread().apply {
+                        id = threadId
+                        name = "Thread $threadId (${debugger.debugEnv.name.string})"
+                    }
+                }
+                .sortedBy { it.id }
+                .toTypedArray()
         }.toFuture()
     }
 
     override fun scopes(args: ScopesArguments): CompletableFuture<ScopesResponse> {
+        val (threadId, frameId) = unpackId(args.frameId)
         return ScopesResponse().apply {
-            scopes = debugger?.getScopes(args.frameId)?.toTypedArray() ?: arrayOf()
+            scopes = debugger(threadId)
+                ?.getScopes(frameId)
+                ?.onEach { it.variablesReference = packId(threadId, it.variablesReference) }
+                ?.toTypedArray()
+                ?: arrayOf()
         }.toFuture()
     }
 
     override fun variables(args: VariablesArguments): CompletableFuture<VariablesResponse> {
+        val (threadId, variablesReference) = unpackId(args.variablesReference)
         return VariablesResponse().apply {
-            variables = debugger?.getVariables(args.variablesReference)?.paginate(args.start, args.count) ?: arrayOf()
+            variables = debugger(threadId)
+                ?.getVariables(variablesReference)
+                ?.onEach { it.variablesReference = packId(threadId, it.variablesReference) }
+                ?.paginate(args.start, args.count)
+                ?: arrayOf()
         }.toFuture()
     }
 
     override fun stackTrace(args: StackTraceArguments): CompletableFuture<StackTraceResponse> {
         return StackTraceResponse().apply {
-            stackFrames = debugger?.getStackFrames()?.paginate(args.startFrame, args.levels) ?: arrayOf()
+            stackFrames = debugger(args.threadId)
+                ?.getStackFrames()
+                ?.onEach { it.id = packId(args.threadId, it.id) }
+                ?.paginate(args.startFrame, args.levels)
+                ?: arrayOf()
         }.toFuture()
     }
 
     override fun source(args: SourceArguments): CompletableFuture<SourceResponse> {
+        val debugger = (args.source?.adapterData as? Int)?.let(::debugger) ?: lastDebugger
+        val sourceReference = args.source?.sourceReference ?: args.sourceReference
         return SourceResponse().apply {
-            content = debugger?.getSourceContents(args.source.sourceReference) ?: ""
+            content = debugger?.getSourceContents(sourceReference) ?: ""
         }.toFuture()
     }
 
     override fun loadedSources(args: LoadedSourcesArguments?): CompletableFuture<LoadedSourcesResponse> {
         return LoadedSourcesResponse().apply {
-            sources = debugger?.getSources()?.toTypedArray() ?: arrayOf()
+            sources = state.getSources().toTypedArray()
         }.toFuture()
     }
 
     companion object {
+        private const val THREAD_ID_SHIFT = 32 - HexDebugServerConfig.THREAD_BITS
+        private const val REFERENCE_MASK = -1 ushr THREAD_ID_SHIFT
+
         // set of players that have connected since the server started
         // this is used to invalidate old client-side debugger data if necessary
         private val knownPlayers = mutableSetOf<UUID>()
+
+        private val allThreadIds get() = 0 until HexDebugServerConfig.config.maxDebugThreads
     }
 }

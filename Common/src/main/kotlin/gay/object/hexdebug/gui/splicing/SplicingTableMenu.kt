@@ -1,9 +1,10 @@
 package gay.`object`.hexdebug.gui.splicing
 
-import at.petrak.hexcasting.api.mod.HexTags
-import at.petrak.hexcasting.api.utils.isMediaItem
 import gay.`object`.hexdebug.blocks.base.ContainerDataDelegate
+import gay.`object`.hexdebug.blocks.base.ContainerDataLongDelegate
+import gay.`object`.hexdebug.blocks.base.ContainerDataSelectionDelegate
 import gay.`object`.hexdebug.blocks.splicing.ClientSplicingTableContainer
+import gay.`object`.hexdebug.blocks.splicing.SplicingTableBlockEntity
 import gay.`object`.hexdebug.blocks.splicing.SplicingTableDataSlot
 import gay.`object`.hexdebug.blocks.splicing.SplicingTableItemSlot
 import gay.`object`.hexdebug.gui.BaseContainerMenu
@@ -13,7 +14,6 @@ import gay.`object`.hexdebug.networking.msg.MsgSplicingTableNewDataS2C
 import gay.`object`.hexdebug.registry.HexDebugMenus
 import gay.`object`.hexdebug.splicing.ISplicingTable
 import gay.`object`.hexdebug.splicing.SplicingTableClientView
-import gay.`object`.hexdebug.utils.isIotaHolder
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.player.Inventory
 import net.minecraft.world.entity.player.Player
@@ -43,8 +43,24 @@ class SplicingTableMenu(
 
     val media by ContainerDataDelegate(
         data,
-        index = SplicingTableDataSlot.MEDIA.index,
+        index0 = SplicingTableDataSlot.MEDIA_0.index,
+        index1 = SplicingTableDataSlot.MEDIA_1.index,
+        index2 = SplicingTableDataSlot.MEDIA_2.index,
+        index3 = SplicingTableDataSlot.MEDIA_3.index,
     )
+
+    var selection by ContainerDataSelectionDelegate(
+        data,
+        fromIndex = SplicingTableDataSlot.SELECTION_FROM.index,
+        toIndex = SplicingTableDataSlot.SELECTION_TO.index,
+    )
+        private set
+
+    var viewStartIndex by ContainerDataDelegate(
+        data,
+        index = SplicingTableDataSlot.VIEW_START_INDEX.index,
+    )
+        private set
 
     var clientView = SplicingTableClientView.empty()
 
@@ -56,17 +72,17 @@ class SplicingTableMenu(
 
         // table
         addTableSlot(SplicingTableItemSlot.LIST, 88, 68) {
-            mayPlace = ::isIotaHolder
+            mayPlace = SplicingTableBlockEntity.Companion::isValidList
         }
         addTableSlot(SplicingTableItemSlot.CLIPBOARD, 7, 68) {
-            mayPlace = ::isIotaHolder
+            mayPlace = SplicingTableBlockEntity.Companion::isValidClipboard
         }
-        mediaSlot = addTableSlot(SplicingTableItemSlot.MEDIA, 205, 169) { // FIXME: placeholder
-            mayPlace = ::isMediaItem
+        mediaSlot = addTableSlot(SplicingTableItemSlot.MEDIA, 205, 169) {
+            mayPlace = SplicingTableBlockEntity.Companion::isValidMedia
         }
-        staffSlot = addTableSlot(SplicingTableItemSlot.STAFF, -20, 169) { // FIXME: placeholder
+        staffSlot = addTableSlot(SplicingTableItemSlot.STAFF, -20, 169) {
             maxStackSize = 1
-            mayPlace = { it.`is`(HexTags.Items.STAVES) }
+            mayPlace = SplicingTableBlockEntity.Companion::isValidStaff
         }
         for ((index, x, y) in SplicingTableItemSlot.STORAGE) {
             addTableSlot(index, 196 + x * 18, 111 + y * 18)
@@ -86,6 +102,7 @@ class SplicingTableMenu(
 
         addDataSlots(data)
 
+        // note: it seems like this ONLY runs on the server?
         addSlotListener(object : ContainerListener {
             override fun slotChanged(menu: AbstractContainerMenu, index: Int, stack: ItemStack) {
                 when (index) {
@@ -124,7 +141,16 @@ class SplicingTableMenu(
     ) = addSlot(FilteredSlot(table, slot, x, y).also(builder))
 
     fun sendData(player: ServerPlayer) {
-        table.getClientView()?.let { MsgSplicingTableNewDataS2C(it).sendToPlayer(player) }
+        table.getClientView()?.let {
+            MsgSplicingTableNewDataS2C(it, selection, viewStartIndex).sendToPlayer(player)
+        }
+    }
+
+    fun receiveData(msg: MsgSplicingTableNewDataS2C) {
+        clientView = msg.data
+        // TODO: does this make the client send a packet to the server?
+        selection = msg.selection
+        viewStartIndex = msg.viewStartIndex
     }
 
     companion object {

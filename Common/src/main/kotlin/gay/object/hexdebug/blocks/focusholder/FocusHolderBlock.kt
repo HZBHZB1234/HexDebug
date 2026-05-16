@@ -1,7 +1,5 @@
 package gay.`object`.hexdebug.blocks.focusholder
 
-import at.petrak.hexcasting.xplat.IXplatAbstractions
-import gay.`object`.hexdebug.registry.HexDebugBlocks
 import gay.`object`.hexdebug.utils.isNotEmpty
 import net.minecraft.core.BlockPos
 import net.minecraft.world.InteractionHand
@@ -67,7 +65,7 @@ class FocusHolderBlock(properties: Properties) : BaseEntityBlock(properties) {
             return InteractionResult.sidedSuccess(level.isClientSide)
         }
 
-        return if (isValidItem(heldItem)) {
+        return if (FocusHolderBlockEntity.isValidItem(heldItem)) {
             // main hand has valid item, swap with stored
             swapItem()
         } else if (heldItem.isNotEmpty) {
@@ -103,7 +101,8 @@ class FocusHolderBlock(properties: Properties) : BaseEntityBlock(properties) {
         return stack
     }
 
-    override fun getDrops(state: BlockState, params: LootContext.Builder): MutableList<ItemStack> {
+    override fun getDrops(state: BlockState, params: LootParams.Builder): MutableList<ItemStack> {
+        @Suppress("DEPRECATION")
         val lootTableDrops = super.getDrops(state, params)
 
         val blockEntity = params.getBlockEntity<FocusHolderBlockEntity>()
@@ -122,16 +121,15 @@ class FocusHolderBlock(properties: Properties) : BaseEntityBlock(properties) {
         return mutableListOf(stack)
     }
 
-    override fun getPistonPushReaction(state: BlockState) = PushReaction.BLOCK
+    override fun hasAnalogOutputSignal(state: BlockState) = true
+
+    override fun getAnalogOutputSignal(state: BlockState, level: Level, pos: BlockPos) =
+        getBlockEntity(level, pos)?.analogOutputSignal ?: 0
 
     companion object {
         val HAS_ITEM: BooleanProperty = BooleanProperty.create("has_item")
 
         fun getBlockEntity(level: BlockGetter, pos: BlockPos) = level.getBlockEntity(pos) as? FocusHolderBlockEntity
-
-        private fun isValidItem(stack: ItemStack) =
-            IXplatAbstractions.INSTANCE.findDataHolder(stack) != null
-            && !stack.`is`(HexDebugBlocks.FOCUS_HOLDER.item) // TODO: use a tag instead?
     }
 }
 

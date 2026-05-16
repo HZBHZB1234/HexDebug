@@ -16,23 +16,28 @@ loom {
 
         mixinConfig(
             "hexdebug-common.mixins.json",
-            "hexdebug-forge.mixins.json",
         )
     }
 
     runs {
-        register("commonDatagen") {
-            data()
-            programArgs(
-                "--mod", hexdebugProperties.modId,
-                "--all",
-                // we're using forge to do the common datagen because fabric's datagen kind of sucks
-                "--output", project(":Common").file("src/generated/resources").absolutePath,
-                "--existing", file("src/main/resources").absolutePath,
-                "--existing", project(":Common").file("src/main/resources").absolutePath,
-                "--existing-mod", "hexcasting",
-            )
-            property("hexdebug.apply-datagen-mixin", "true")
+        for ((name, outputProject) in arrayOf(
+            // we're using forge to do the common datagen because fabric's datagen kind of sucks
+            "common" to project(":Common"),
+            "forge" to project,
+        )) {
+            register("${name}Datagen") {
+                data()
+                programArgs(
+                    "--mod", hexdebugProperties.modId,
+                    "--all",
+                    "--output", outputProject.file("src/generated/resources").absolutePath,
+                    "--existing", file("src/main/resources").absolutePath,
+                    "--existing", project(":Common").file("src/main/resources").absolutePath,
+                    "--existing-mod", "hexcasting",
+                )
+                property("hexdebug.apply-datagen-mixin", "true")
+                property("hexdebug.$name-datagen", "true")
+            }
         }
     }
 }
@@ -45,12 +50,17 @@ hexdebugModDependencies {
         replace(Regex("""\](\S+)"""), "($1")
         replace(Regex("""(\S+)\["""), "$1)")
     }
+}
 
+hexdebugPublishDependencies {
     requires("architectury-api")
     requires("cloth-config")
     requires(curseforge = "hexcasting", modrinth = "hex-casting")
+    requires("ioticblocks")
 
     requires("kotlin-for-forge")
+
+    optional("emi")
 }
 
 dependencies {
@@ -62,11 +72,18 @@ dependencies {
     modApi(libs.hexcasting.forge) { isTransitive = false }
     modImplementation(libs.paucal.forge)
     modLocalRuntime(libs.patchouli.forge)
+    modLocalRuntime(libs.caelus)
+    modLocalRuntime(libs.inline.forge) { isTransitive = false }
 
     modApi(libs.clothConfig.forge)
 
-    libs.mixinExtras.also {
-        localRuntime(it)
+    libs.mixinExtras.common.also {
+        compileOnly(it)
+        annotationProcessor(it)
+    }
+
+    libs.mixinExtras.forge.also {
+        implementation(it)
         include(it)
     }
 
@@ -83,16 +100,14 @@ dependencies {
     }
 
     modLocalRuntime(libs.devAuth.forge)
-}
 
-tasks {
-    shadowJar {
-        exclude("fabric.mod.json")
+    modImplementation(libs.ioticblocks.forge)
+
+    libs.emi.forge.also {
+        modCompileOnly(it)
+        modLocalRuntime(it)
     }
 
-    named("runCommonDatagen") {
-        doFirst {
-            project(":Common").delete("src/generated/resources")
-        }
-    }
+    forgeRuntimeLibrary(project(":hexdebug-core-common", "namedElements")) { isTransitive = false }
+    forgeRuntimeLibrary(project(":hexdebug-core-forge", "namedElements")) { isTransitive = false }
 }

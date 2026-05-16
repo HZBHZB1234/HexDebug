@@ -13,10 +13,14 @@
     },
     {
       type: "hexcasting:pattern",
-      op_id: "hexdebug:next_eval_index",
-      anchor: "hexdebug:next_eval_index",
-      output: "int or null",
-      text: "hexdebug.category.patterns.entry.debugging.page.next_eval_index",
+      op_id: "hexdebug:const/cognitohazard",
+      anchor: "hexdebug:const/cognitohazard",
+      output: "cognitohazard",
+      text: "hexdebug.category.patterns.entry.debugging.page.const/cognitohazard.1",
+    },
+    {
+      type: "patchouli:text",
+      text: "hexdebug.category.patterns.entry.debugging.page.const/cognitohazard.2",
     },
     {
       type: "hexcasting:pattern",
@@ -36,6 +40,14 @@
       anchor: "hexdebug:craft/debugger",
       input: "entity, [pattern]",
       text: "hexdebug.category.patterns.entry.debugging.page.craft/debugger",
-    }
+    },
+    {
+      type: "hexcasting:pattern",
+      advancement: "hexcasting:enlightenment",
+      op_id: "hexdebug:craft/quenched_debugger",
+      anchor: "hexdebug:craft/quenched_debugger",
+      input: "entity, [pattern]",
+      text: "hexdebug.category.patterns.entry.debugging.page.craft/quenched_debugger",
+    },
   ],
 }

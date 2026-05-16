@@ -4,11 +4,16 @@ import at.petrak.hexcasting.api.client.ScryingLensOverlayRegistry
 import at.petrak.hexcasting.api.utils.asTextComponent
 import at.petrak.hexcasting.api.utils.gray
 import at.petrak.hexcasting.api.utils.plusAssign
-import at.petrak.hexcasting.common.lib.hex.HexIotaTypes
+import dev.architectury.event.events.client.ClientPlayerEvent
+import gay.`object`.hexdebug.HexDebug.LOGGER
 import gay.`object`.hexdebug.adapter.proxy.DebugProxyClient
+import gay.`object`.hexdebug.api.client.splicing.SplicingTableIotaRenderers
 import gay.`object`.hexdebug.blocks.focusholder.FocusHolderBlock
-import gay.`object`.hexdebug.config.HexDebugConfig
-import gay.`object`.hexdebug.config.HexDebugConfig.GlobalConfig
+import gay.`object`.hexdebug.config.HexDebugClientConfig
+import gay.`object`.hexdebug.config.HexDebugServerConfig
+import gay.`object`.hexdebug.gui.splicing.renderers.*
+import gay.`object`.hexdebug.gui.splicing.renderers.conditional.IfPathExistsRendererProvider
+import gay.`object`.hexdebug.gui.splicing.widgets.BaseIotaButton
 import gay.`object`.hexdebug.registry.HexDebugBlocks
 import gay.`object`.hexdebug.utils.styledHoverName
 import gay.`object`.hexdebug.utils.toComponent
@@ -18,6 +23,7 @@ import net.minecraft.client.gui.screens.Screen
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.Style
+import net.minecraft.world.InteractionResult
 import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
@@ -29,13 +35,17 @@ object HexDebugClient {
     private const val MAX_IOTA_DISPLAY_LINES = 4
 
     fun init() {
-        HexDebugConfig.initClient()
+        LOGGER.info("Hiding cognitohazards in your client...")
+        HexDebugServerConfig.initClient()
+        HexDebugClientConfig.init()
         DebugProxyClient.init()
         addScryingLensOverlays()
+        registerSplicingTableIotaRenderers()
+        invalidateIotaRendererCacheWhenThingsHappenThatShouldInvalidateIt()
     }
 
     fun getConfigScreen(parent: Screen): Screen {
-        return AutoConfig.getConfigScreen(GlobalConfig::class.java, parent).get()
+        return AutoConfig.getConfigScreen(HexDebugClientConfig.GlobalConfig::class.java, parent).get()
     }
 
     private fun addScryingLensOverlays() {
@@ -82,5 +92,32 @@ object HexDebugClient {
         }
 
         return MojangPair(stack, truncatedDisplay)
+    }
+
+    private fun registerSplicingTableIotaRenderers() {
+        for ((name, parser) in arrayOf(
+            "conditional/if_path_exists" to IfPathExistsRendererProvider.PARSER,
+            "item" to ItemRendererProvider.PARSER,
+            "layers" to LayersRendererProvider.PARSER,
+            "list" to ListRendererProvider.PARSER,
+            "pattern" to PatternRenderer.PARSER,
+            "sub_iota" to SubIotaRendererProvider.PARSER,
+            "texture" to TextureRendererProvider.PARSER,
+        )) {
+            SplicingTableIotaRenderers.register(HexDebug.id(name), parser)
+        }
+    }
+
+    private fun invalidateIotaRendererCacheWhenThingsHappenThatShouldInvalidateIt() {
+        // for rainbow bracket configs
+        HexDebugClientConfig.holder.registerSaveListener { _, _ ->
+            BaseIotaButton.invalidateRendererCache()
+            InteractionResult.PASS
+        }
+
+        // cached iotas from one world are probably not applicable to others
+        ClientPlayerEvent.CLIENT_PLAYER_QUIT.register {
+            BaseIotaButton.invalidateRendererCache()
+        }
     }
 }
