@@ -18,3 +18,32 @@ jobs:
     with:
       deploy-pages: ${{ github.event_name != 'pull_request' && contains(fromJson(vars.HEXDOC_BRANCHES), github.ref_name) }}
       release: false
+
+  build-forge:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-home-cache-includes: |
+            caches
+            notifications
+            loom-cache
+
+      - name: Build Forge 1.19.2
+        run: ./gradlew :Forge:build --no-daemon
+
+      - name: Upload Forge JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: HexDebug-Forge-1.19.2
+          path: Forge/build/libs/*.jar
