@@ -23,7 +23,6 @@ import gay.`object`.hexdebug.blocks.base.BaseContainer
 import gay.`object`.hexdebug.blocks.base.ContainerDataDelegate
 import gay.`object`.hexdebug.blocks.base.ContainerDataLongDelegate
 import gay.`object`.hexdebug.blocks.base.ContainerDataSelectionDelegate
-import gay.`object`.hexdebug.casting.eval.FakeCastEnv
 import gay.`object`.hexdebug.casting.eval.SplicingTableCastEnv
 import gay.`object`.hexdebug.config.HexDebugServerConfig
 import gay.`object`.hexdebug.gui.splicing.SplicingTableMenu
@@ -238,12 +237,11 @@ class SplicingTableBlockEntity(pos: BlockPos, state: BlockState) :
     }
 
     override fun getClientView() = getData(null)?.run {
-        val env = FakeCastEnv(level)
         var depth = 0
         SplicingTableClientView(
             list = list?.mapIndexed { index, iota ->
                 if ((iota as? PatternIota)?.pattern.sigsEqual(SpecialPatterns.RETROSPECTION)) depth--
-                val view = SplicingTableIotaClientView(iota, env, index, depth)
+                val view = SplicingTableIotaClientView(iota, level, index, depth)
                 if ((iota as? PatternIota)?.pattern.sigsEqual(SpecialPatterns.INTROSPECTION)) depth++
                 view
             },
@@ -433,7 +431,7 @@ class SplicingTableBlockEntity(pos: BlockPos, state: BlockState) :
     }
 
     fun getHex(level: ServerLevel): List<Iota>? =
-        hexTag?.map { IotaType.deserialize(it.asCompound, level) }
+        hexTag?.map { HexIotaTypes.deserialize(it.asCompound, level) }
 
     fun setHex(hex: List<Iota>?) {
         hexTag = hex?.asSequence()

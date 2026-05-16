@@ -139,24 +139,24 @@ fun Iota.displayWithPatternName(world: ServerLevel): Component = when (this) {
     else -> display()
 }
 
+fun Iota.displayWithPatternName(env: CastingContext): Component =
+    displayWithPatternName(env.world)
+
 @JvmOverloads
-fun Iota.toHexpatternSource(env: CastingContext, wrapEmbedded: Boolean = true): String {
+fun Iota.toHexpatternSource(world: ServerLevel, wrapEmbedded: Boolean = true): String {
     val iotaText = when (this) {
         is PatternIota -> {
-            // don't wrap known patterns in angled brackets
             when (pattern.angles) {
                 SpecialPatterns.INTROSPECTION.angles -> "{"
                 SpecialPatterns.RETROSPECTION.angles -> "}"
-                else -> pattern.getI18nOrNull(env)?.string
+                else -> pattern.getI18nOrNull(world)?.string
             }?.let { return it }
-            // but do wrap unknown ones
             pattern.simpleString()
         }
         is ListIota -> list.joinToString(separator = ", ", prefix = "[", postfix = "]") {
             when (it) {
-                // don't use { and } for intro/retro in an embedded list
-                is PatternIota -> it.pattern.getI18nOrNull(env)?.string ?: it.pattern.simpleString()
-                else -> it.toHexpatternSource(env, wrapEmbedded = false)
+                is PatternIota -> it.pattern.getI18nOrNull(world)?.string ?: it.pattern.simpleString()
+                else -> it.toHexpatternSource(world, wrapEmbedded = false)
             }
         }
         is GarbageIota -> "Garbage"
@@ -167,6 +167,10 @@ fun Iota.toHexpatternSource(env: CastingContext, wrapEmbedded: Boolean = true): 
     }
     return iotaText
 }
+
+@JvmOverloads
+fun Iota.toHexpatternSource(env: CastingContext, wrapEmbedded: Boolean = true): String =
+    toHexpatternSource(env.world, wrapEmbedded)
 
 fun List<SplicingTableIotaClientView>.toHexpatternSource(): String {
     return joinToString("\n") {

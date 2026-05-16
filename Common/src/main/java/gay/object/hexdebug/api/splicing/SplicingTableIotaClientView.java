@@ -1,13 +1,12 @@
 package gay.object.hexdebug.api.splicing;
 
-import at.petrak.hexcasting.api.spell.casting.CastingContext;
 import at.petrak.hexcasting.api.spell.iota.Iota;
-import at.petrak.hexcasting.api.spell.iota.IotaType;
 import at.petrak.hexcasting.common.lib.hex.HexIotaTypes;
 import gay.object.hexdebug.utils.ExtensionsKt;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -51,14 +50,14 @@ public record SplicingTableIotaClientView(
     @ApiStatus.Internal
     public SplicingTableIotaClientView(
         @NotNull Iota iota,
-        @NotNull CastingContext env,
+        @NotNull ServerLevel world,
         int index,
         int depth
     ) {
         this(
-            IotaType.serialize(iota),
-            ExtensionsKt.displayWithPatternName(iota, env),
-            ExtensionsKt.toHexpatternSource(iota, env),
+            HexIotaTypes.serialize(iota),
+            ExtensionsKt.displayWithPatternName(iota, world),
+            ExtensionsKt.toHexpatternSource(iota, world),
             index,
             depth
         );
@@ -74,7 +73,7 @@ public record SplicingTableIotaClientView(
     public static SplicingTableIotaClientView subIota(@NotNull CompoundTag tag) {
         return new SplicingTableIotaClientView(
             tag,
-            IotaType.getDisplay(tag),
+            HexIotaTypes.getDisplay(tag),
             "",
             0,
             0,
