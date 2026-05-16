@@ -23,12 +23,6 @@ dependencies {
     include(project(":hexdebug-core-$platform"))
 }
 
-tasks {
-    processIncludeJars {
-
-    }
-}
-
 publishMods {
     dryRun = providers.zip(envOrEmpty("CI"), envOrEmpty("DRY_RUN")) { ci, dryRun ->
         ci.isBlank() || dryRun.isNotBlank()
